@@ -147,6 +147,7 @@ class IbGateway(VtGateway):
     #----------------------------------------------------------------------
     def connect(self):
         """连接"""
+
         # 载入json文件
         try:
             f = file(self.filePath)
@@ -164,6 +165,7 @@ class IbGateway(VtGateway):
             self.port = int(setting['port'])
             self.clientId = int(setting['clientId'])
             self.accountCode = str(setting['accountCode'])
+            print(self.host, self.port)
         except KeyError:
             log = VtLogData()
             log.gatewayName = self.gatewayName
