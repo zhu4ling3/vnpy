@@ -183,6 +183,8 @@ class IbGateway(VtGateway):
     def subscribe(self, subscribeReq):
         """订阅行情"""
         # 如果尚未连接行情，则将订阅请求缓存下来后直接返回
+
+        #TODO： 改写本方法，使得适用获取历史数据
         if not self.connected:
             self.subscribeReqDict[subscribeReq.symbol] = subscribeReq
             return
