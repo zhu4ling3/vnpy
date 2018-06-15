@@ -267,27 +267,93 @@ class VtContractData(VtBaseData):
 
 
 ########################################################################
-class VtHistoricalDataReq(object):
+class VtHistoricalTickReq(object):
+    """
+    根据http://interactivebrokers.github.io/tws-api/historical_time_and_sales.html#reqHistoricalTicks定义数据项
+
+    tickerId, A unique identifier which will serve to identify the incoming data.
+    contract, The IBApi.Contract you are interested in.
+    startDateTime, i.e. "20170701 12:01:00". Uses TWS timezone specified at login.
+    endDateTime, 获取数据的终止时间.
+                    格式：%Y%m%d %H:%M:%S
+    numberOfTicks, Number of distinct data points. Max currently 1000 per request.
+    whatToShow, The type of data to retrieve. See Historical Data Types
+                    格式："TRADES", "MIDPOINT"等
+                    http://interactivebrokers.github.io/tws-api/historical_bars.html#hd_what_to_show
+    useRTH, Whether (1) or not (0) to retrieve data generated only within Regular Trading Hours (RTH)
+                    1 获得常规开市闭市时间段内的数据
+                    0 获取常规开市闭市时间段内，以及提前交易段和延迟交易段的数据
+    ignoreSize, A filter only used when the source price is Bid_Ask
+    miscOptions should be defined as null, reserved for internal use
+
+    """
+
+    # TODO： 根据IB API定义所需数据项
+
+    def __init__(self):
+        """Constructor"""
+        self.symbol = EMPTY_STRING  # 代码
+        self.exchange = EMPTY_STRING  # 交易所
+
+        # 以下为IB相关
+        self.productClass = EMPTY_UNICODE  # 合约类型
+        self.currency = EMPTY_STRING  # 合约货币
+        self.expiry = EMPTY_STRING  # 到期日
+        self.strikePrice = EMPTY_FLOAT  # 行权价
+        self.optionType = EMPTY_UNICODE  # 期权类型
+
+        # 以下为历史数据获取所需
+        self.historicalTickParams = {}
+
+
+########################################################################
+class VtHistoricalBarReq(object):
     """
     根据http://interactivebrokers.github.io/tws-api/historical_bars.html#hd_request定义数据项
 
     tickerId, A unique identifier which will serve to identify the incoming data.
     contract, The IBApi.Contract you are interested in.
-    endDateTime, The request's end date and time (the empty string indicates current present moment).
+    endDateTime, 获取数据的终止时间.
+                    格式：%Y%m%d %H:%M:%S
     durationString, The amount of time (or Valid Duration String units) to go back from the request's given end date and time.
+                    格式：1 S, 1 D, 1 W, 1 M, 1 Y
+                    http://interactivebrokers.github.io/tws-api/historical_bars.html#hd_duration
     barSizeSetting, The data's granularity or Valid Bar Sizes
+                    格式：1 secs, 1 min, 5 mins, 1 hour, 1 hours, 1 day, 1 week, 1 month
+                    http://interactivebrokers.github.io/tws-api/historical_bars.html#hd_barsize
     whatToShow, The type of data to retrieve. See Historical Data Types
+                    格式："TRADES", "MIDPOINT"等
+                    http://interactivebrokers.github.io/tws-api/historical_bars.html#hd_what_to_show
     useRTH, Whether (1) or not (0) to retrieve data generated only within Regular Trading Hours (RTH)
+                    1 获得常规开市闭市时间段内的数据
+                    0 获取常规开市闭市时间段内，以及提前交易段和延迟交易段的数据
     formatDate, The format in which the incoming bars' date should be presented. Note that for day bars, only yyyyMMdd format is available.
-    keepUpToDate, Whether a subscription is made to return updates of unfinished real time bars as they are available (True), or all data is returned on a one-time basis (False). Available starting with API v973.03+ and TWS v965+. If True, and endDateTime cannot be specified.
+                    指定市场数据的日期表现形式
+    keepUpToDate, Whether a subscription is made to return updates of unfinished real time bars as they are available (True),
+                    or all data is returned on a one-time basis (False). Available starting with API v973.03+ and TWS v965+.
+                    If True, and endDateTime cannot be specified.
+                    True 即使Bar还没有结束也返回最新的Bar数据； False 当Bar的时间完毕后再返回。
 
 
     """
+
     # TODO： 根据IB API定义所需数据项
 
     def __init__(self):
+        """Constructor"""
+        self.symbol = EMPTY_STRING  # 代码
+        self.exchange = EMPTY_STRING  # 交易所
 
-        pass
+        # 以下为IB相关
+        self.productClass = EMPTY_UNICODE  # 合约类型
+        self.currency = EMPTY_STRING  # 合约货币
+        self.expiry = EMPTY_STRING  # 到期日
+        self.strikePrice = EMPTY_FLOAT  # 行权价
+        self.optionType = EMPTY_UNICODE  # 期权类型
+
+        # 以下为历史数据获取所需
+        self.historicalBarParams = {}
+
 
 
 ########################################################################

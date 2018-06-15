@@ -23,6 +23,10 @@ from vnpy.trader.vtGateway import *
 from vnpy.trader.vtFunction import getJsonPath
 from .language import text
 
+from vnpy.api.ibapi.wrapper import EWrapper
+from vnpy.api.ibapi.client import EClient
+
+
 
 
 # 以下为一些VT类型和CTP类型的映射字典
@@ -302,7 +306,7 @@ class IbGateway(VtGateway):
 
 
 ########################################################################
-class IbWrapper(IbApi):
+class IbWrapper(EWrapper):
     """IB回调接口的实现"""
 
     #----------------------------------------------------------------------
