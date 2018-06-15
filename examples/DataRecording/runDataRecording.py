@@ -6,6 +6,8 @@ import multiprocessing
 from time import sleep
 from datetime import datetime, time
 
+from pytz import timezone
+
 from vnpy.event import EventEngine2
 from vnpy.trader.vtEvent import EVENT_LOG, EVENT_ERROR
 from vnpy.trader.vtEngine import MainEngine, LogEngine
@@ -62,15 +64,17 @@ def runParentProcess():
     le.addConsoleHandler()
     le.info(u'启动行情记录守护父进程')
     
-    DAY_START = time(8, 57)         # 日盘启动和停止时间
-    DAY_END = time(15, 18)
-    NIGHT_START = time(20, 57)      # 夜盘启动和停止时间
-    NIGHT_END = time(2, 33)
+    tz = timezone('America/New_York')
+    DAY_START = time(8, 42, tzinfo=tz)         # 日盘启动和停止时间
+    DAY_END = time(15, 18, tzinfo=tz)
+    NIGHT_START = time(20, 57, tzinfo=tz)      # 夜盘启动和停止时间
+    NIGHT_END = time(2, 33, tzinfo=tz)
+
     
     p = None        # 子进程句柄
 
     while True:
-        currentTime = datetime.now().time()
+        currentTime = datetime.now(tz).time()
         recording = False
 
         # 判断当前处于的时间段
