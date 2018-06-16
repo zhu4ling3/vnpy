@@ -4,7 +4,7 @@ and conditions of the IB API Non-Commercial License or the IB API Commercial Lic
 """
 
 
-from ibapi.object_implem import Object
+from .object_implem import Object
 
  
 class SoftDollarTier(Object):

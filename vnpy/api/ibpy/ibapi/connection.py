@@ -14,8 +14,8 @@ import socket
 import threading
 import logging
 
-from ibapi.common import *
-from ibapi.errors import *
+from .common import *
+from .errors import *
 
 
 #TODO: support SSL !!

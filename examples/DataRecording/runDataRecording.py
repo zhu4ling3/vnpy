@@ -65,9 +65,9 @@ def runParentProcess():
     le.info(u'启动行情记录守护父进程')
     
     tz = timezone('America/New_York')
-    DAY_START = time(8, 42, tzinfo=tz)         # 日盘启动和停止时间
+    DAY_START = time(0, 42, tzinfo=tz)         # 日盘启动和停止时间
     DAY_END = time(15, 18, tzinfo=tz)
-    NIGHT_START = time(20, 57, tzinfo=tz)      # 夜盘启动和停止时间
+    NIGHT_START = time(20, 00, tzinfo=tz)      # 夜盘启动和停止时间
     NIGHT_END = time(2, 33, tzinfo=tz)
 
     

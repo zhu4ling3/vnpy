@@ -12,7 +12,7 @@ This module has tools for implementing the IB low level messaging.
 import struct
 import logging
 
-from ibapi.common import UNSET_INTEGER, UNSET_DOUBLE
+from .common import UNSET_INTEGER, UNSET_DOUBLE
 
 
 def make_msg(text) -> bytes:

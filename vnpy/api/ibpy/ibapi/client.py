@@ -17,18 +17,19 @@ import queue
 import socket
 
 
-from ibapi import (decoder, reader, comm)
-from ibapi.connection import Connection
-from ibapi.message import OUT
-from ibapi.common import *
-from ibapi.contract import Contract
-from ibapi.order import Order
-from ibapi.execution import ExecutionFilter
-from ibapi.scanner import ScannerSubscription
-from ibapi.comm import (make_field, make_field_handle_empty)
-from ibapi.utils import (current_fn_name, BadMessage)
-from ibapi.errors import *
-from ibapi.server_versions import *
+from . import (decoder, reader, comm)
+from .connection import Connection
+from .message import OUT
+from .common import *
+from .contract import Contract
+from .order import Order
+from .execution import ExecutionFilter
+from .scanner import ScannerSubscription
+from .comm import (make_field, make_field_handle_empty)
+from .utils import (current_fn_name, BadMessage)
+from .errors import *
+from .server_versions import *
+
 
 
 # TODO: use pylint
@@ -1644,8 +1645,8 @@ class EClient(object):
         msg = make_field(OUT.CANCEL_POSITIONS_MULTI) \
               + make_field(VERSION) \
               + make_field(reqId) \
- \
-                self.sendMsg(msg)
+
+        self.sendMsg(msg)
 
     def reqAccountUpdatesMulti(self, reqId: int, account: str, modelCode: str,
                                ledgerAndNLV: bool):
@@ -1691,8 +1692,8 @@ class EClient(object):
         msg = make_field(OUT.CANCEL_ACCOUNT_UPDATES_MULTI) \
               + make_field(VERSION) \
               + make_field(reqId) \
- \
-                self.sendMsg(msg)
+
+        self.sendMsg(msg)
 
     #########################################################################
     ################## Daily PnL
@@ -2125,8 +2126,8 @@ class EClient(object):
               + make_field(VERSION) \
               + make_field(int(faData)) \
               + make_field(cxml) \
- \
-                return self.sendMsg(msg)
+
+        return self.sendMsg(msg)
 
     #########################################################################
     ################## Historical Data

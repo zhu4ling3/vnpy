@@ -8,7 +8,7 @@ and conditions of the IB API Non-Commercial License or the IB API Commercial Lic
 TickType type
 """
 
-from ibapi.enum_implem import Enum
+from .enum_implem import Enum
 
 
 # TickType

@@ -14,7 +14,7 @@ import logging
 import inspect
 
 
-from ibapi.common import UNSET_INTEGER, UNSET_DOUBLE
+from .common import UNSET_INTEGER, UNSET_DOUBLE
 
 # I use this just to visually emphasize it's a wrapper overriden method
 def iswrapper(fn):

@@ -11,26 +11,26 @@ It will call the corresponding method from the EWrapper so that customer's code
 """
 
 
-from ibapi import order_condition
-from ibapi.message import IN
-from ibapi.wrapper import *
-from ibapi.order import Order
-from ibapi.order import OrderComboLeg
-from ibapi.contract import Contract
-from ibapi.contract import ContractDescription
-from ibapi.contract import DeltaNeutralContract
-from ibapi.contract import ComboLeg
-from ibapi.execution import Execution
-from ibapi.order_state import OrderState
-from ibapi.server_versions import *
-from ibapi.utils import *
-from ibapi.softdollartier import SoftDollarTier
-from ibapi.ticktype import *
-from ibapi.tag_value import TagValue
-from ibapi.scanner import ScanData
-from ibapi.commission_report import CommissionReport
-from ibapi.errors import BAD_MESSAGE
-from ibapi.common import *
+from . import order_condition
+from .message import IN
+from .wrapper import *
+from .order import Order
+from .order import OrderComboLeg
+from .contract import Contract
+from .contract import ContractDescription
+from .contract import DeltaNeutralContract
+from .contract import ComboLeg
+from .execution import Execution
+from .order_state import OrderState
+from .server_versions import *
+from .utils import *
+from .softdollartier import SoftDollarTier
+from .ticktype import *
+from .tag_value import TagValue
+from .scanner import ScanData
+from .commission_report import CommissionReport
+from .errors import BAD_MESSAGE
+from .common import *
 
 class HandleInfo(Object):
     def __init__(self, wrap=None, proc=None):

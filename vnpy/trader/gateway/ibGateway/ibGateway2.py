@@ -23,9 +23,7 @@ from vnpy.trader.vtGateway import *
 from vnpy.trader.vtFunction import getJsonPath
 from .language import text
 
-from vnpy.api.ibapi.wrapper import EWrapper
-from vnpy.api.ibapi.client import EClient
-
+from vnpy.api.ibpy.vnib.vnib import IbApi
 
 
 
@@ -154,7 +152,7 @@ class IbGateway(VtGateway):
 
         # 载入json文件
         try:
-            f = file(self.filePath)
+            f = open(self.filePath)
         except IOError:
             log = VtLogData()
             log.gatewayName = self.gatewayName
@@ -178,7 +176,7 @@ class IbGateway(VtGateway):
             return            
         
         # 发起连接
-        self.api.eConnect(self.host, self.port, self.clientId, False)
+        self.api.connect(self.host, self.port, self.clientId)
         
         # 查询服务器时间
         self.api.reqCurrentTime()
@@ -306,7 +304,7 @@ class IbGateway(VtGateway):
 
 
 ########################################################################
-class IbWrapper(EWrapper):
+class IbWrapper(IbApi):
     """IB回调接口的实现"""
 
     #----------------------------------------------------------------------

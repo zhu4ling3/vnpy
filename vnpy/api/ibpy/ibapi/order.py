@@ -4,9 +4,9 @@ and conditions of the IB API Non-Commercial License or the IB API Commercial Lic
 """
 
 
-from ibapi.common import UNSET_INTEGER, UNSET_DOUBLE
-from ibapi.object_implem import Object
-from ibapi.softdollartier import SoftDollarTier
+from .common import UNSET_INTEGER, UNSET_DOUBLE
+from .object_implem import Object
+from .softdollartier import SoftDollarTier
 
 # enum Origin
 (CUSTOMER, FIRM, UNKNOWN) = range(3)

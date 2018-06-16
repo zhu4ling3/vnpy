@@ -4,8 +4,8 @@ and conditions of the IB API Non-Commercial License or the IB API Commercial Lic
 """
 
 
-from ibapi.object_implem import Object
-from ibapi.common import UNSET_INTEGER, UNSET_DOUBLE
+from .object_implem import Object
+from .common import UNSET_INTEGER, UNSET_DOUBLE
 
 
 class ScanData(Object):

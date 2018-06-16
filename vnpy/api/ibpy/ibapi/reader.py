@@ -14,7 +14,7 @@ remove the size prefix and put the rest in a Queue.
 import logging
 from threading import Thread
 
-from ibapi import comm
+from . import comm
 
 
 class EReader(Thread):

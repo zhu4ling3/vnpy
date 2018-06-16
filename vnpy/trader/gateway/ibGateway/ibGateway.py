@@ -25,6 +25,7 @@ from .language import text
 
 
 
+
 # 以下为一些VT类型和CTP类型的映射字典
 # 价格类型映射
 priceTypeMap = {}
