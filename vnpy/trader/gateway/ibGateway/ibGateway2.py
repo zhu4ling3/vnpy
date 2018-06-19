@@ -18,12 +18,13 @@ import calendar
 from datetime import datetime, timedelta
 from copy import copy
 
-from vnpy.api.ib import *
+#from vnpy.api.ib import *
 from vnpy.trader.vtGateway import *
 from vnpy.trader.vtFunction import getJsonPath
 from .language import text
 
-from vnpy.api.ibpy.vnib.vnib import IbApi
+from vnpy.api.ibpy import *
+
 
 
 
@@ -142,7 +143,8 @@ class IbGateway(VtGateway):
         self.connected = False          # 连接状态
         
         self.api = IbWrapper(self)      # API接口
-        
+
+
         self.fileName = self.gatewayName + '_connect.json'
         self.filePath = getJsonPath(self.fileName, __file__)             
 
@@ -174,10 +176,14 @@ class IbGateway(VtGateway):
             log.logContent = text.CONFIG_KEY_MISSING
             self.onLog(log)
             return            
-        
+
+
         # 发起连接
         self.api.connect(self.host, self.port, self.clientId)
-        
+
+        # 建立连接后，启动收取队列数据的主循环过程。这个过程是在独立的子进程里面执行的。
+        self.api.start()
+
         # 查询服务器时间
         self.api.reqCurrentTime()
     
@@ -218,7 +224,7 @@ class IbGateway(VtGateway):
 
             # 订阅行情
             self.tickerId += 1
-            self.api.reqMktData(self.tickerId, contract, '', False, TagValueList())
+            self.api.reqMktData(self.tickerId, contract, '', False, False, TagValueList())
 
             # 创建Tick对象并保存到字典中
             tick = VtTickData()
@@ -230,13 +236,14 @@ class IbGateway(VtGateway):
             self.tickProductDict[self.tickerId] = subscribeReq.productClass
 
         elif isinstance(subscribeReq, VtHistoricalTickReq):
-            # 请求历史Tick数据
-            self.tickerId += 1
             # TODO: 请求历史Tick数据
-        elif isinstance(subscribeReq, VtHistoricalBarReq):
-            # 请求历史Bar数据
             self.tickerId += 1
+            self.api.reqHistoricalTicks(self.tickerId, contract, startDateTime='', ignoreSize=True, miscOptions=[], **subscribeReq.historicalTickParams )
+
+        elif isinstance(subscribeReq, VtHistoricalBarReq):
             # TODO: 请求历史Bar数据
+            self.tickerId += 1
+
 
     #----------------------------------------------------------------------
     def sendOrder(self, orderReq):
@@ -300,8 +307,17 @@ class IbGateway(VtGateway):
     #----------------------------------------------------------------------
     def close(self):
         """关闭"""
-        self.api.eDisconnect()
+        self.api.disconnect()
 
+
+
+    #----------------------
+    def run(self):
+        """
+
+        :return:
+        """
+        self.api.run()
 
 ########################################################################
 class IbWrapper(IbApi):
@@ -341,11 +357,21 @@ class IbWrapper(IbApi):
         log = VtLogData()
         log.gatewayName = self.gatewayName
         log.logContent = text.API_CONNECTED.format(time=t)
-        self.gateway.onLog(log) 
-        
+        self.gateway.onLog(log)
+
+        # python3环境下报错 RuntimeError: dictionary changed size during iteration
+        # for symbol, req in self.subscribeReqDict.items():
+        #     del self.subscribeReqDict[symbol]
+        #     self.gateway.subscribe(req)
+
+        keys = []
         for symbol, req in self.subscribeReqDict.items():
-            del self.subscribeReqDict[symbol]
-            self.gateway.subscribe(req)        
+            keys.append(symbol)
+            self.gateway.subscribe(req)
+
+        for key in keys:
+            del self.subscribeReqDict[key]
+
         
     #----------------------------------------------------------------------
     def connectAck(self):
@@ -358,7 +384,7 @@ class IbWrapper(IbApi):
         err = VtErrorData()
         err.gatewayName = self.gatewayName
         err.errorID = errorCode
-        err.errorMsg = errorString.decode('GBK')
+        err.errorMsg = errorString
         self.gateway.onError(err)
         
     #----------------------------------------------------------------------
@@ -552,15 +578,21 @@ class IbWrapper(IbApi):
     #----------------------------------------------------------------------
     def contractDetails(self, reqId, contractDetails):
         """合约查询回报"""
-        symbol = contractDetails.summary.localSymbol
-        exchange = exchangeMapReverse.get(contractDetails.summary.exchange, EXCHANGE_UNKNOWN)
+        # Python API的contractDetails定义和CPP API不同
+        # symbol = contractDetails.summary.localSymbol
+        # exchange = exchangeMapReverse.get(contractDetails.summary.exchange, EXCHANGE_UNKNOWN)
+
+        symbol = contractDetails.contract.localSymbol
+        exchange = exchangeMapReverse.get(contractDetails.contract.exchange, EXCHANGE_UNKNOWN)
         vtSymbol = '.'.join([symbol, exchange])
         ct = self.contractDict.get(vtSymbol, None)
         
         if not ct:
             return
-        
-        ct.name = contractDetails.longName.decode('UTF-8')
+
+        # Python3不需要decode
+        # ct.name = contractDetails.longName.decode('UTF-8')
+        ct.name = contractDetails.longName
         ct.priceTick = contractDetails.minTick        
 
         # 推送
@@ -635,7 +667,12 @@ class IbWrapper(IbApi):
     def historicalData(self, reqId, date, open_, high, low, close, volume, barCount, WAP, hasGaps):
         """"""
         pass
-        
+
+    def historicalTicks(self, reqId, ticks, done):
+        """returns historical tick data when whatToShow=MIDPOINT"""
+        pass
+
+
     #----------------------------------------------------------------------
     def scannerParameters(self, xml):
         """"""

@@ -88,6 +88,9 @@ def runParentProcess():
             (datetime.today().weekday() == 0 and currentTime < DAY_START)):
             recording = False
 
+        # TODO: 调试完毕后移除 recording = True
+        recording = True
+
         # 记录时间则需要启动子进程
         if recording and p is None:
             le.info(u'启动子进程')

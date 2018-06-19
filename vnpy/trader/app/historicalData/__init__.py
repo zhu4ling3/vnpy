@@ -2,12 +2,12 @@
 
 # encoding: UTF-8
 
-from __future__ import absolute_import
-from .drEngine import DrEngine
-from .uiDrWidget import DrEngineManager
 
-appName = 'DataRecorder'
-appDisplayName = u'行情记录'
-appEngine = DrEngine
-appWidget = DrEngineManager
+from .hdEngine import HdEngine
+from .uiHdWidget import HdEngineManager
+
+appName = 'HistoricalData'
+appDisplayName = u'历史数据记录'
+appEngine = HdEngine
+appWidget = HdEngineManager
 appIco = 'dr.ico'

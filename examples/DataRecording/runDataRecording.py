@@ -31,7 +31,7 @@ def runChildProcess():
 
     # 创建日志引擎
     le = LogEngine()
-    le.setLogLevel(le.LEVEL_INFO)
+    le.setLogLevel(le.LEVEL_DEBUG)
     le.addConsoleHandler()
     le.info(u'启动行情记录运行子进程')
     
@@ -68,7 +68,7 @@ def runParentProcess():
     DAY_START = time(0, 42, tzinfo=tz)         # 日盘启动和停止时间
     DAY_END = time(15, 18, tzinfo=tz)
     NIGHT_START = time(20, 00, tzinfo=tz)      # 夜盘启动和停止时间
-    NIGHT_END = time(2, 33, tzinfo=tz)
+    NIGHT_END = time(0, 33, tzinfo=tz)
 
     
     p = None        # 子进程句柄
@@ -88,6 +88,9 @@ def runParentProcess():
             (datetime.today().weekday() == 5 and currentTime > NIGHT_END) or 
             (datetime.today().weekday() == 0 and currentTime < DAY_START)):
             recording = False
+
+        # TODO: 调试完毕后移除 recording = True
+        recording = True
 
         # 记录时间则需要启动子进程
         if recording and p is None:
