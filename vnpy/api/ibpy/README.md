@@ -8,12 +8,16 @@
     - 没有超过最大Market Data Line的限制
         > Market Data Line的概念是对一种产品(Instrument)的实时数据请求占用一个Market Data Line。
         系统默认每个用户的最大Market Data Line数量为100，它包括TWS中和API应用程序中所有产品的合计。
+- IB对于获取历史行情数据另有一些技术限制，见后说明。
 
 
 #市场数据的种类
+##实时数据
+IB提供三种精度的实时数据：tick级，秒内级，秒间级。
 - 快照数据snapshot。此数据并非tick-by-tick数据，而是根据tick-by-tick进行合成的数据，1秒钟内会有几个快照。
 - tick-by-ticks数据。高精度数据，TWS v969 and API v973.04之后才支持。
-    
+
+##    
 #快照数据snapshot的请求和接收
 ###用reqMktData()请求数据
 - 返回的数据包含常规数据项，如果需要额外的可选项，用genericTickList参数指定获取
