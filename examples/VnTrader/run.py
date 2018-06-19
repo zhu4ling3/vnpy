@@ -1,14 +1,14 @@
 # encoding: UTF-8
 
 # 重载sys模块，设置默认字符串编码方式为utf8
-try:
-    reload  # Python 2
-except NameError:  # Python 3
-    from importlib import reload
-import sys
+# try:
+#     reload  # Python 2
+# except NameError:  # Python 3
+#     from importlib import reload
+# import sys
 
-reload(sys)
-sys.setdefaultencoding('utf8')
+# reload(sys)
+# sys.setdefaultencoding('utf8')
 
 # 判断操作系统
 import platform
@@ -22,10 +22,10 @@ from vnpy.trader.uiQt import createQApp
 from vnpy.trader.uiMainWindow import MainWindow
 
 # 加载底层接口
-from vnpy.trader.gateway import (ctpGateway, oandaGateway,
-                                 ibGateway)
+# from vnpy.trader.gateway import (ctpGateway, oandaGateway,
+#                                  ibGateway)
 
-# from vnpy.trader.gateway import (ibGateway)
+from vnpy.trader.gateway import (ibGateway)
 
 """
 if system == 'Linux':
@@ -53,8 +53,8 @@ def main():
     me = MainEngine(ee)
 
     # 添加交易接口
-    me.addGateway(ctpGateway)
-    me.addGateway(oandaGateway)
+    # me.addGateway(ctpGateway)
+    # me.addGateway(oandaGateway)
     me.addGateway(ibGateway)
 
     """
