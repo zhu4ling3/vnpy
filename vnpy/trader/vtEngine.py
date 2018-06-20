@@ -545,6 +545,7 @@ class DataEngine(object):
     def loadContracts(self):
         """从硬盘读取合约对象"""
         f = shelve.open(self.contractFilePath)
+
         if 'data' in f:
             d = f['data']
             for key, value in d.items():

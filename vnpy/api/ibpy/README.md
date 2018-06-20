@@ -8,17 +8,25 @@
     - 没有超过最大Market Data Line的限制
         > Market Data Line的概念是对一种产品(Instrument)的实时数据请求占用一个Market Data Line。
         系统默认每个用户的最大Market Data Line数量为100，它包括TWS中和API应用程序中所有产品的合计。
-- IB对于获取历史行情数据另有一些技术限制，见后说明。
+- IB对于获取行情数据另有一些技术限制，见后说明。
 
 
 #市场数据的种类
-##实时数据
-IB提供三种精度的实时数据：tick级，秒内级，秒间级。
-- 快照数据snapshot。此数据并非tick-by-tick数据，而是根据tick-by-tick进行合成的数据，1秒钟内会有几个快照。
-- tick-by-ticks数据。高精度数据，TWS v969 and API v973.04之后才支持。
+###实时数据
+IB提供三种精度的实时数据：原始tick级，合成tick级(1秒内多次)，Bar级。
+- 原始tick数据。Tick-by-Tick Data。高精度数据，TWS v969+ and API v973.04+之后才支持。形如“TWS Time & Sales Window”界面的数据。
+    >限制：最多5个产品可以接收原始tick
+- 合成tick数据。Streaming market data。此数据是根据原始tick进行合成的tick数据，1秒钟内会有几个快照。
+- Bar数据。5 Second Real Time Bars 。每5秒产生一个Bar，包含OHLC值。
 
-##    
-#快照数据snapshot的请求和接收
+
+###历史数据
+IB提供两种精度的历史数据：原始tick级，Bar级。
+- 原始tick数据。Tick-by-Tick Data。TWS v968+ and API v973.04+之后才支持。形如“TWS Time & Sales Window”界面的数据。
+- Bar级数据。Historical Bar Data。1分钟，5分钟......小时，日，周，月的Bar数据。
+
+    
+#实时数据-合成tick数据的请求和接收
 ###用reqMktData()请求数据
 - 返回的数据包含常规数据项，如果需要额外的可选项，用genericTickList参数指定获取
     > 可获得的数据项参考：http://interactivebrokers.github.io/tws-api/tick_types.html
@@ -27,8 +35,13 @@ IB提供三种精度的实时数据：tick级，秒内级，秒间级。
 价格（美国国内最佳买卖价格）。第五个参数指定是否请求法规快照。
     > 每一次Regulatory Snapshot的生成需要支付0.01美元。
 
-###用tickPrice()和tickSize()接收数据
-reqMktData()请求的数据是异步返回的，并且根据返回数据的类型用不同的函数返回，例如
+###用tickPrice(),tickSize(),tickString()接收数据
+reqMktData()请求的数据是异步返回的，并且根据返回数据的类型用不同的函数返回。
+- tickPrice()。接收Decimal数据。例如BidPrice, AskPrice等
+- tickSize()。接收int数据。例如Volume等。
+- tickString()。接收字符串或者日期等类型。例如成交时间等。
+
+
 
 
 #tick-by-tick数据
