@@ -215,10 +215,6 @@ class EClient(object):
     def run(self):
         """This is the function that has the message loop."""
 
-        # import pydevd
-        # pydevd.settrace(suspend=False, trace_only_current_thread=True)
-        logging.debug('a'*100)
-
         try:
             while not self.done and (self.isConnected()
                         or not self.msg_queue.empty()):

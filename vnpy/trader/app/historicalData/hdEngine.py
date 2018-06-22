@@ -60,6 +60,8 @@ class HdEngine(object):
         self.queue = Queue()  # 队列
         self.thread = Thread(target=self.run)  # 线程
 
+        self.tickReqList = []
+
         # 载入设置，订阅行情
         self.loadSetting()
 
@@ -68,6 +70,9 @@ class HdEngine(object):
 
         # 注册事件监听
         self.registerEvent()
+
+
+        self.span = None
 
         # ----------------------------------------------------------------------
 
@@ -88,10 +93,12 @@ class HdEngine(object):
                 for setting in l:
                     symbol = setting[0]
                     gateway = setting[1]
+
                     vtSymbol = symbol
 
                     req = VtHistoricalTickReq()
                     req.symbol = setting[0]
+                    req.gateway = gateway
 
                     # 针对LTS和IB接口，订阅行情需要交易所代码
                     if len(setting) >= 3:
@@ -105,25 +112,25 @@ class HdEngine(object):
                         req.historicalTickParams = setting[5]
 
 
+                    self.tickReqList.append(req)
 
-
-                    self.mainEngine.subscribe(req, gateway)
-
-                    # tick = VtTickData()           # 该tick实例可以用于缓存部分数据（目前未使用）
-                    # self.tickDict[vtSymbol] = tick
-                    self.tickSymbolSet.add(vtSymbol)
-
-                    # 保存到配置字典中
-                    if vtSymbol not in self.settingDict:
-                        d = {
-                            'symbol': symbol,
-                            'gateway': gateway,
-                            'tick': True
-                        }
-                        self.settingDict[vtSymbol] = d
-                    else:
-                        d = self.settingDict[vtSymbol]
-                        d['tick'] = True
+                    # self.mainEngine.subscribe(req, gateway)
+                    #
+                    # # tick = VtTickData()           # 该tick实例可以用于缓存部分数据（目前未使用）
+                    # # self.tickDict[vtSymbol] = tick
+                    # self.tickSymbolSet.add(vtSymbol)
+                    #
+                    # # 保存到配置字典中
+                    # if vtSymbol not in self.settingDict:
+                    #     d = {
+                    #         'symbol': symbol,
+                    #         'gateway': gateway,
+                    #         'tick': True
+                    #     }
+                    #     self.settingDict[vtSymbol] = d
+                    # else:
+                    #     d = self.settingDict[vtSymbol]
+                    #     d['tick'] = True
 
             # 分钟线记录配置
             if 'bar' in drSetting:
@@ -172,6 +179,36 @@ class HdEngine(object):
     def getSetting(self):
         """获取配置"""
         return self.settingDict, self.activeSymbolDict
+
+
+
+    # ----------------------------------------------------------------------
+    def processTimerEvent(self, event):
+
+        if self.span == None:
+            self.span = 0
+            for req in self.tickReqList:
+                self.mainEngine.subscribe(req, req.gateway)
+            return
+
+        if self.span < 10:
+            self.span += 1
+            return
+
+        self.span = 0
+        for req in self.tickReqList:
+            self.mainEngine.subscribe(req, req.gateway)
+
+
+
+
+
+
+
+
+
+
+
 
     # ----------------------------------------------------------------------
     def procecssTickEvent(self, event):

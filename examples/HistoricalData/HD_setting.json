@@ -8,28 +8,8 @@
             "JPY",
             "外汇",
             {
-                "endDateTime": "20180615 00:10:10",
-                "numberOfTicks": 10,
-                "whatToShow": "TRADES",
-                "useRth": 0
-            }
-        ]
-    ],
-    "bar": [
-        [
-            "USD.JPY1",
-            "IB",
-            "IDEALPRO",
-            "JPY",
-            "外汇",
-            {
-                "endDateTime": "20180615 00:00:00",
-                "durationString": "1 Y",
-                "barSizeSetting": "1 day",
-                "whatToShow": "TRADES",
-                "useRTH": 0,
-                "formatDate": "yyyyMMdd",
-                "keepUpToDate": false
+                "startDateTime": "20180615 00:10:09",
+                "endDateTime": "20180615 00:11:00"
             }
         ]
     ]

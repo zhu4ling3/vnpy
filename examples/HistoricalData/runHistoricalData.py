@@ -9,7 +9,7 @@ from datetime import datetime, time
 from pytz import timezone
 
 from vnpy.event import EventEngine2
-from vnpy.trader.vtEvent import EVENT_LOG, EVENT_ERROR
+from vnpy.trader.vtEvent import EVENT_LOG, EVENT_ERROR, EVENT_TIMER
 from vnpy.trader.vtEngine import MainEngine, LogEngine
 from vnpy.trader.gateway import ibGateway
 from vnpy.trader.app import historicalData
@@ -47,12 +47,18 @@ def runChildProcess():
     ee.register(EVENT_ERROR, processErrorEvent)
     le.info(u'注册日志事件监听')
 
+    # TODO: 补充用定时器来订阅历史数据的理由
+    ee.register(EVENT_TIMER, me.getApp(historicalData.appName).processTimerEvent)
+
 
     me.connect('IB')
     le.info(u'连接IB接口')
 
-    while True:
-        sleep(1)
+    # 建立连接后，启动收取队列数据的主循环过程。这个过程是在独立的子进程里面执行的。
+    me.getGateway(ibGateway.gatewayName).start()
+
+    # while True:
+    #     sleep(1)
 
 #----------------------------------------------------------------------
 def runParentProcess():

@@ -15,21 +15,6 @@
       "JPY",
       "外汇"
     ]
-  ],
-  "bar": [
-    [
-      "IBKR",
-      "IB",
-      "SMART",
-      "USD",
-      "股票"
-    ],
-    [
-      "USD.JPY",
-      "IB",
-      "IDEALPRO",
-      "JPY",
-      "外汇"
-    ]
   ]
 }
+
