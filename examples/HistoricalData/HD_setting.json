@@ -1,16 +1,27 @@
 {
-    "working": true,
-    "tick": [
-         [
-            "USD.JPY",
-            "IB",
-            "IDEALPRO",
-            "JPY",
-            "外汇",
-            {
-                "startDateTime": "20180615 00:10:09",
-                "endDateTime": "20180615 00:11:00"
-            }
-        ]
+  "working": true,
+  "tick": [
+    [
+      "XAUUSD",
+      "IB",
+      "SMART",
+      "USD",
+      "现货",
+      {
+        "startDateTime": "20170101 00:00:00",
+        "endDateTime": "20180623 00:00:00"
+      }
+    ],
+    [
+      "USD.JPY",
+      "IB",
+      "IDEALPRO",
+      "JPY",
+      "外汇",
+      {
+        "startDateTime": "20170101 00:00:00",
+        "endDateTime": "20180623 00:00:00"
+      }
     ]
+  ]
 }

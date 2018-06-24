@@ -24,7 +24,7 @@ from vnpy.trader.vtObject import VtHistoricalTickReq, VtHistoricalBarReq, VtLogD
 from vnpy.trader.app.ctaStrategy.ctaTemplate import BarGenerator
 
 from .hdBase import *
-#from .language import text
+from .language import text
 
 
 ########################################################################
@@ -111,26 +111,24 @@ class HdEngine(object):
                         req.productClass = setting[4]
                         req.historicalTickParams = setting[5]
 
+                    self.mainEngine.subscribe(req, gateway)
 
-                    self.tickReqList.append(req)
+                    # tick = VtTickData()           # 该tick实例可以用于缓存部分数据（目前未使用）
+                    # self.tickDict[vtSymbol] = tick
+                    self.tickSymbolSet.add(vtSymbol)
 
-                    # self.mainEngine.subscribe(req, gateway)
-                    #
-                    # # tick = VtTickData()           # 该tick实例可以用于缓存部分数据（目前未使用）
-                    # # self.tickDict[vtSymbol] = tick
-                    # self.tickSymbolSet.add(vtSymbol)
-                    #
-                    # # 保存到配置字典中
-                    # if vtSymbol not in self.settingDict:
-                    #     d = {
-                    #         'symbol': symbol,
-                    #         'gateway': gateway,
-                    #         'tick': True
-                    #     }
-                    #     self.settingDict[vtSymbol] = d
-                    # else:
-                    #     d = self.settingDict[vtSymbol]
-                    #     d['tick'] = True
+                    # 保存到配置字典中
+                    if vtSymbol not in self.settingDict:
+                        d = {
+                            'symbol': symbol,
+                            'gateway': gateway,
+                            'tick': True
+                        }
+                        self.settingDict[vtSymbol] = d
+                    else:
+                        d = self.settingDict[vtSymbol]
+                        d['tick'] = True
+
 
             # 分钟线记录配置
             if 'bar' in drSetting:
@@ -179,34 +177,6 @@ class HdEngine(object):
     def getSetting(self):
         """获取配置"""
         return self.settingDict, self.activeSymbolDict
-
-
-
-    # ----------------------------------------------------------------------
-    def processTimerEvent(self, event):
-
-        if self.span == None:
-            self.span = 0
-            for req in self.tickReqList:
-                self.mainEngine.subscribe(req, req.gateway)
-            return
-
-        if self.span < 10:
-            self.span += 1
-            return
-
-        self.span = 0
-        for req in self.tickReqList:
-            self.mainEngine.subscribe(req, req.gateway)
-
-
-
-
-
-
-
-
-
 
 
 
@@ -311,6 +281,6 @@ class HdEngine(object):
         """快速发出日志事件"""
         log = VtLogData()
         log.logContent = content
-        event = Event(type_=EVENT_DATARECORDER_LOG)
+        event = Event(type_=EVENT_HISTORICALDATA_LOG)
         event.dict_['data'] = log
         self.eventEngine.put(event)

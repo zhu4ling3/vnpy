@@ -47,10 +47,6 @@ def runChildProcess():
     ee.register(EVENT_ERROR, processErrorEvent)
     le.info(u'注册日志事件监听')
 
-    # TODO: 补充用定时器来订阅历史数据的理由
-    ee.register(EVENT_TIMER, me.getApp(historicalData.appName).processTimerEvent)
-
-
     me.connect('IB')
     le.info(u'连接IB接口')
 
