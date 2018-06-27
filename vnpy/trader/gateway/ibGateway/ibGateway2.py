@@ -26,6 +26,7 @@ from vnpy.trader.vtEvent import EVENT_TIMER
 from .language import text
 
 from vnpy.api.ibpy import *
+from .decorator import retry_connect, logging_level
 
 # 以下为一些VT类型和CTP类型的映射字典
 # 价格类型映射
@@ -113,13 +114,15 @@ accountKeyMap['MaintMarginReq'] = 'margin'
 
 
 ########################################################################
+@retry_connect
 class IbGateway(VtGateway):
     """IB接口"""
 
     # ----------------------------------------------------------------------
     def __init__(self, eventEngine, gatewayName='IB'):
         """Constructor"""
-        super(IbGateway, self).__init__(eventEngine, gatewayName)
+        #super(IbGateway, self).__init__(eventEngine, gatewayName)
+        super().__init__(eventEngine, gatewayName)
 
         self.__internal_counter = -1
 
@@ -290,7 +293,6 @@ class IbGateway(VtGateway):
 
             st = datetime.strptime(subscribeReq.historicalTickParams['startDateTime'], '%Y%m%d %H:%M:%S')
             et = datetime.strptime(subscribeReq.historicalTickParams['endDateTime'], '%Y%m%d %H:%M:%S')
-            at = st + timedelta(seconds=-1)
 
             # # 创建Tick对象并保存到字典中
             tick = VtTickData()
@@ -304,13 +306,12 @@ class IbGateway(VtGateway):
                     'contractInfo': contract,
                     'startDateTime': st,
                     'endDateTime': et,
-                    'alreadyDateTime': at,
                     'tickInfo': tick,
-                    'totalTicks': 0,
                 },
             )
 
-            self.eventEngine.register(EVENT_TIMER, self.__reqHistTick)
+
+            self.eventEngine.register(EVENT_TIMER, self.__reqHistTickR)
 
 
         elif isinstance(subscribeReq, VtHistoricalBarReq):
@@ -318,7 +319,7 @@ class IbGateway(VtGateway):
             self.tickerId += 1
 
     # ----------------------------------------------------------------------
-    def __reqHistTick(self, event):
+    def __reqHistTick(self, event, is_reserve=False):
         """
         根据缓存的请求，向IB发起历史tick数据的请求
 
@@ -326,7 +327,7 @@ class IbGateway(VtGateway):
         """
 
         # Timer事件是1秒一次，在本方法中可以控制向IB请求历史数据的频率为ONE_CALL_INTERNAL秒一次。
-        ONE_CALL_INTERNAL = 10
+        ONE_CALL_INTERNAL = 3
         if self.__internal_counter == -1:
             self.__internal_counter = 0
         elif self.__internal_counter < ONE_CALL_INTERNAL:
@@ -335,18 +336,53 @@ class IbGateway(VtGateway):
         else:
             self.__internal_counter = 0
 
-        for o in self.histTickDataList:
 
+        # 遍历请求列表
+        want_del = []
+        for o in self.histTickDataList:
             contract = o['contractInfo']
             st = o['startDateTime']
             et = o['endDateTime']
-            at = o['alreadyDateTime']
 
-            # 如果st>=et，表示所有历史数据已经获取完毕；
-            # 另外，有时IB对于请求会延迟响应，此时下一个定时器事件会到来，st还是和上次一样。为了避免重复请求，将上一次请求的st时间记录
-            # 下来（at），然后本次请求和st和at比较，如果st《=at，则表示已经请求过了。
-            if st >= et or st <= at:
+            # 为第一次请求设置一些属性
+            if not 'lastTime' in o:
+                o['lastTime'] = et + timedelta(seconds=-1) if is_reserve else st + timedelta(seconds=1)
+                o['totalTicks'] = 0
+                o['retry_count'] = 0
+                o['is_reserve'] = is_reserve
+
+            lt = o['lastTime']
+
+            # 所有历史数据已经获取完毕，可以删除其请求对象；
+            if st > et:
+                want_del.append(o)
                 continue
+
+
+
+            # 另外，有时IB对于请求会延迟响应，此时下一个定时器事件会到来。为了避免重复请求，将上一次请求的时间记录下来，
+            # 然后本次请求和st和at比较，如果st<=at，则表示已经请求过了。
+            RETRY_COUNT = 100
+            if not is_reserve:
+                if st == lt:
+                    o['retry_count'] += 1
+                    # 如果重试大于n次，则先取消这笔请求，然后再重新请求
+                    if o['retry_count'] <= RETRY_COUNT:
+                        continue
+
+                    # TODO: 取消这笔请求
+                    self.api.cancelHistoricalData(self.tickerId)
+            else:
+                if et == lt:
+                    o['retry_count'] += 1
+                    # 如果重试大于n次，则先取消这笔请求，然后再重新请求
+                    if o['retry_count'] <= RETRY_COUNT:
+                        continue
+
+                    # TODO: 取消这笔请求
+                    self.api.cancelHistoricalData(self.tickerId)
+
+
 
             self.tickerId += 1
 
@@ -363,16 +399,43 @@ class IbGateway(VtGateway):
             self.histTickReqDict[self.tickerId] = o
 
             NUM_OF_TICKS = 1000
-            self.api.reqHistoricalTicks(self.tickerId,
-                                        contract,
-                                        startDateTime=st.strftime('%Y%m%d %H:%M:%S'),
-                                        endDateTime='',
-                                        numberOfTicks=NUM_OF_TICKS,
-                                        whatToShow='TRADES',
-                                        useRth=0,
-                                        ignoreSize=False, miscOptions=[])
+            if not is_reserve:
+                self.api.reqHistoricalTicks(self.tickerId,
+                                            contract,
+                                            startDateTime=st.strftime('%Y%m%d %H:%M:%S'),
+                                            endDateTime='',
+                                            numberOfTicks=NUM_OF_TICKS,
+                                            whatToShow='TRADES',
+                                            useRth=0,
+                                            ignoreSize=False, miscOptions=[])
+                o['lastTime'] = st
 
-            o['alreadyDateTime'] = st
+            else:
+                self.api.reqHistoricalTicks(self.tickerId,
+                                            contract,
+                                            startDateTime='',
+                                            endDateTime=et.strftime('%Y%m%d %H:%M:%S'),
+                                            numberOfTicks=NUM_OF_TICKS,
+                                            whatToShow='TRADES',
+                                            useRth=0,
+                                            ignoreSize=False, miscOptions=[])
+                o['lastTime'] = et
+
+
+        # 删除已经接收完毕的请求数据
+        for o in want_del:
+            self.histTickDataList.remove(o)
+
+    # ----------------------------------------------------------------------
+    def __reqHistTickR(self, event):
+        """
+        根据缓存的请求，向IB发起历史tick数据的请求
+
+        :return:
+        """
+        # Timer事件是1秒一次，在本方法中可以控制向IB请求历史数据的频率为ONE_CALL_INTERNAL秒一次。
+        self.__reqHistTick(event, is_reserve=True)
+
 
     # ----------------------------------------------------------------------
     def cancelOrder(self, cancelOrderReq):
@@ -415,13 +478,15 @@ class IbGateway(VtGateway):
 
 
 ########################################################################
+@retry_connect
+@logging_level(level=logging.WARNING)
 class IbWrapper(IbApi):
     """IB回调接口的实现"""
 
     # ----------------------------------------------------------------------
     def __init__(self, gateway):
         """Constructor"""
-        super(IbWrapper, self).__init__()
+        super().__init__()
 
         self.apiStatus = False  # 连接状态
 
@@ -784,6 +849,8 @@ class IbWrapper(IbApi):
         st = self.histTickReqDict[reqId]['startDateTime']
         et = self.histTickReqDict[reqId]['endDateTime']
 
+        tick = self.histTickReqDict[reqId]['tickInfo']
+
         t = None
         num = 0
         total = 0
@@ -793,20 +860,20 @@ class IbWrapper(IbApi):
             # 清洗数据，仅当st<=数据日期<et数据才有效。回调函数传入的ticks是按照时间升序排列的
             if dt < st:
                 continue
-            if dt >= et:
+            if dt > et:
                 break
 
             if t != dt:
 
                 if t:
                     total += num
-                    #logging.info('---------------------------------------%s %d' % (t.strftime('%H:%M:%S.%f'), num))
+                    logging.debug('-----------%s %s num=%d' % (tick.symbol, t.strftime('%Y%m%d %H:%M:%S'), num))
                 t = dt
                 num = 0
 
             num += 1
 
-            tick = self.histTickReqDict[reqId]['tickInfo']
+
             tick.time = dt.strftime('%H:%M:%S.%f')
             tick.date = dt.strftime('%Y%m%d')
             tick.lastPrice = o.price
@@ -815,10 +882,15 @@ class IbWrapper(IbApi):
             self.gateway.onTick(newtick)
 
         if t:
-            self.histTickReqDict[reqId]['startDateTime'] = t + timedelta(seconds=1)
+            if not self.histTickReqDict[reqId]['is_reserve']:
+                self.histTickReqDict[reqId]['startDateTime'] = t + timedelta(seconds=1)
+            else:
+                t0 = datetime.fromtimestamp(ticks[0].time)
+                self.histTickReqDict[reqId]['endDateTime'] = t0 + timedelta(seconds=-1)
+
             total += num
             self.histTickReqDict[reqId]['totalTicks'] += total
-            #logging.info('---------------------------------------%s %d total=%d' % (t.strftime('%H:%M:%S.%f'), num, self.histTickReqDict[reqId]['totalTicks']))
+            logging.warning('-----------%s %s %d total=%d' % (tick.symbol, t.strftime('%Y%m%d %H:%M:%S'), num, self.histTickReqDict[reqId]['totalTicks']))
 
 
 
