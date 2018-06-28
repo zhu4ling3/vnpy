@@ -8,8 +8,8 @@
       "USD",
       "现货",
       {
-        "startDateTime": "20170101 00:00:00",
-        "endDateTime": "20180623 00:00:00"
+        "startDateTime": "20160101 00:00:00",
+        "endDateTime": "20160625 00:40:00"
       }
     ],
     [
@@ -19,8 +19,19 @@
       "JPY",
       "外汇",
       {
-        "startDateTime": "20170101 00:00:00",
-        "endDateTime": "20180623 00:00:00"
+        "startDateTime": "20160101 00:00:00",
+        "endDateTime": "20160625 00:31:00"
+      }
+    ],
+    [
+      "BABA",
+      "IB",
+      "SMART",
+      "USD",
+      "股票",
+      {
+        "startDateTime": "20160101 00:00:00",
+        "endDateTime": "20160625 00:31:00"
       }
     ]
   ]

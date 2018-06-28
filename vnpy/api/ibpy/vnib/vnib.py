@@ -1,6 +1,6 @@
 from ..ibapi.client import EClient
 from ..ibapi.wrapper import EWrapper
-from threading import Thread
+
 
 
 class IbApi(EClient, EWrapper):
