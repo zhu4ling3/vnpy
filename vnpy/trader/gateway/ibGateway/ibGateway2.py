@@ -26,7 +26,7 @@ from vnpy.trader.vtEvent import EVENT_TIMER
 from .language import text
 
 from vnpy.api.ibpy import *
-from .decorator import retry_connect, logging_level
+
 
 # 以下为一些VT类型和CTP类型的映射字典
 # 价格类型映射
@@ -112,26 +112,29 @@ accountKeyMap['UnrealizedPnL'] = 'positionProfit'
 accountKeyMap['AvailableFunds'] = 'available'
 accountKeyMap['MaintMarginReq'] = 'margin'
 
+from .historicalData import HistoricalTicksRequest
+
+
 
 ########################################################################
-@retry_connect
 class IbGateway(VtGateway):
     """IB接口"""
 
+    tickerId = 0
     # ----------------------------------------------------------------------
     def __init__(self, eventEngine, gatewayName='IB'):
         """Constructor"""
         # super(IbGateway, self).__init__(eventEngine, gatewayName)
         super().__init__(eventEngine, gatewayName)
 
-        self.__internal_counter = -1
+
 
         self.host = EMPTY_STRING  # 连接地址
         self.port = EMPTY_INT  # 连接端口
         self.clientId = EMPTY_INT  # 用户编号
         self.accountCode = EMPTY_STRING  # 账户编号
 
-        self.tickerId = 0  # 订阅行情时的代码编号
+        #self.tickerId = 0  # 订阅行情时的代码编号
         self.tickDict = {}  # tick快照字典，key为tickerId，value为VtTickData对象
         self.tickProductDict = {}  # tick对应的产品类型字典，key为tickerId，value为产品类型
 
@@ -146,13 +149,13 @@ class IbGateway(VtGateway):
 
         self.connected = False  # 连接状态
 
-        self.histTickDataList = []
-        self.histTickReqDict = {}
-
         self.api = IbWrapper(self)  # API接口
 
         self.fileName = self.gatewayName + '_connect.json'
         self.filePath = getJsonPath(self.fileName, __file__)
+
+        # 历史Tick数据的工具类
+        self.historicalTicksReq = HistoricalTicksRequest(self)
 
         # ----------------------------------------------------------------------
 
@@ -279,214 +282,14 @@ class IbGateway(VtGateway):
             self.tickProductDict[self.tickerId] = subscribeReq.productClass
 
         elif isinstance(subscribeReq, VtHistoricalTickReq):
-            # TODO: 请求历史Tick数据
-
-            # 将向IB请求历史数据所需的固定参数保存到列表，同时将onTick时需要的固定参数也保存到列表，供后续处理时使用。
-            contract = Contract()
-            contract.localSymbol = str(subscribeReq.symbol)
-            contract.exchange = exchangeMap.get(subscribeReq.exchange, '')
-            contract.secType = productClassMap.get(subscribeReq.productClass, '')
-            contract.currency = currencyMap.get(subscribeReq.currency, '')
-            contract.expiry = subscribeReq.expiry
-            contract.strike = subscribeReq.strikePrice
-            contract.right = optionTypeMap.get(subscribeReq.optionType, '')
-
-            st = datetime.strptime(subscribeReq.historicalTickParams['startDateTime'], '%Y%m%d %H:%M:%S')
-            et = datetime.strptime(subscribeReq.historicalTickParams['endDateTime'], '%Y%m%d %H:%M:%S')
-
-            # # 创建Tick对象并保存到字典中
-            tick = VtTickData()
-            tick.symbol = subscribeReq.symbol
-            tick.exchange = subscribeReq.exchange
-            tick.vtSymbol = '.'.join([tick.symbol, tick.exchange])
-            tick.gatewayName = self.gatewayName
-
-            self.histTickDataList.append(
-                {
-                    'contractInfo': contract,
-                    'startDateTime': st,
-                    'endDateTime': et,
-                    'tickInfo': tick,
-                },
-            )
-
-            self.eventEngine.register(EVENT_TIMER, self.__reqHistTickR)
-
+            # 请求历史Tick数据
+            self.historicalTicksReq.subscribe(subscribeReq)
 
         elif isinstance(subscribeReq, VtHistoricalBarReq):
             # TODO: 请求历史Bar数据
-            self.tickerId += 1
+            pass
 
-    # ----------------------------------------------------------------------
-    def __reqHistTick(self, event):
-        """
-        根据缓存的请求，向IB发起历史tick数据的请求
 
-        :return:
-        """
-
-        # Timer事件是1秒一次，在本方法中可以控制向IB请求历史数据的频率为ONE_CALL_INTERNAL秒一次。
-        ONE_CALL_INTERNAL = 3
-        if self.__internal_counter == -1:
-            self.__internal_counter = 0
-        elif self.__internal_counter < ONE_CALL_INTERNAL:
-            self.__internal_counter += 1
-            return
-        else:
-            self.__internal_counter = 0
-
-        # 遍历请求列表
-        want_del = []
-        for o in self.histTickDataList:
-            contract = o['contractInfo']
-            st = o['startDateTime']
-            et = o['endDateTime']
-
-            # 为第一次请求设置一些属性
-            if not 'lastTime' in o:
-                o['lastTime'] = st + timedelta(seconds=1)
-                o['totalTicks'] = 0
-                o['retry_count'] = 0
-                o['reqId'] = None
-
-            lt = o['lastTime']
-
-            # 所有历史数据已经获取完毕，可以删除其请求对象；
-            if st > et:
-                want_del.append(o)
-                continue
-
-            # 另外，有时IB对于请求会延迟响应，此时下一个定时器事件会到来。为了避免重复请求，将上一次请求的时间记录下来，
-            # 然后本次请求和st和at比较，如果st<=at，则表示已经请求过了。
-            RETRY_COUNT = 10
-            if st == lt:
-                o['retry_count'] += 1
-                # 如果重试大于n次，则先取消这笔请求，然后再重新请求
-                if o['retry_count'] <= RETRY_COUNT:
-                    continue
-
-                # TODO: 取消这笔请求
-                self.api.cancelHistoricalData(o['reqId'])
-                logging.warning('cancelHistoricalData-----------reqId=%d' % o['reqId'])
-
-            self.tickerId += 1
-
-            # TODO: 测试通过后在加入去
-            # 创建Tick对象并保存到字典中
-            # tick = VtTickData()
-            # tick.symbol = subscribeReq.symbol
-            # tick.exchange = subscribeReq.exchange
-            # tick.vtSymbol = '.'.join([tick.symbol, tick.exchange])
-            # tick.gatewayName = self.gatewayName
-            # self.tickDict[self.tickerId] = tick
-            # self.tickProductDict[self.tickerId] = subscribeReq.productClass
-
-            self.histTickReqDict[self.tickerId] = o
-
-            NUM_OF_TICKS = 1000
-            self.api.reqHistoricalTicks(self.tickerId,
-                                        contract,
-                                        startDateTime=st.strftime('%Y%m%d %H:%M:%S'),
-                                        endDateTime='',
-                                        numberOfTicks=NUM_OF_TICKS,
-                                        whatToShow='TRADES',
-                                        useRth=0,
-                                        ignoreSize=False, miscOptions=[])
-
-            o['lastTime'] = st
-            o['reqId'] = self.tickerId
-            o['retry_count'] = 0
-            logging.warning('-----------reqId=%d %s %s' %
-                            (o['reqId'], contract.localSymbol, st.strftime('%Y%m%d %H:%M:%S')))
-
-        # 删除已经接收完毕的请求数据
-        for o in want_del:
-            self.histTickDataList.remove(o)
-
-    # ----------------------------------------------------------------------
-    def __reqHistTickR(self, event):
-        """
-        根据缓存的请求，向IB发起历史tick数据的请求
-
-        :return:
-        """
-
-        # Timer事件是1秒一次，在本方法中可以控制向IB请求历史数据的频率为ONE_CALL_INTERNAL秒一次。
-        ONE_CALL_INTERNAL = 3
-        if self.__internal_counter == -1:
-            self.__internal_counter = 0
-        elif self.__internal_counter < ONE_CALL_INTERNAL:
-            self.__internal_counter += 1
-            return
-        else:
-            self.__internal_counter = 0
-
-        # 遍历请求列表
-        want_del = []
-        for o in self.histTickDataList:
-            contract = o['contractInfo']
-            st = o['startDateTime']
-            et = o['endDateTime']
-
-            # 为第一次请求设置一些属性
-            if not 'lastTime' in o:
-                o['lastTime'] = et + timedelta(seconds=-1)
-                o['totalTicks'] = 0
-                o['retry_count'] = 0
-                o['reqId'] = None
-
-            lt = o['lastTime']
-
-            # 所有历史数据已经获取完毕，可以删除其请求对象；
-            if st > et:
-                want_del.append(o)
-                continue
-
-            # 另外，有时IB对于请求会延迟响应，此时下一个定时器事件会到来。为了避免重复请求，将上一次请求的时间记录下来，
-            # 然后本次请求和st和at比较，如果st<=at，则表示已经请求过了。
-            RETRY_COUNT = 100
-            if et == lt:
-                o['retry_count'] += 1
-                # 如果重试大于n次，则先取消这笔请求，然后再重新请求
-                if o['retry_count'] <= RETRY_COUNT:
-                    continue
-
-                    # TODO: 取消这笔请求
-                    self.api.cancelHistoricalData(o['reqId'])
-                    self.histTickReqDict.pop(o['reqId'])
-
-            self.tickerId += 1
-
-            # TODO: 测试通过后在加入去
-            # 创建Tick对象并保存到字典中
-            # tick = VtTickData()
-            # tick.symbol = subscribeReq.symbol
-            # tick.exchange = subscribeReq.exchange
-            # tick.vtSymbol = '.'.join([tick.symbol, tick.exchange])
-            # tick.gatewayName = self.gatewayName
-            # self.tickDict[self.tickerId] = tick
-            # self.tickProductDict[self.tickerId] = subscribeReq.productClass
-
-            self.histTickReqDict[self.tickerId] = o
-
-            NUM_OF_TICKS = 1000
-            self.api.reqHistoricalTicks(self.tickerId,
-                                        contract,
-                                        startDateTime='',
-                                        endDateTime=et.strftime('%Y%m%d %H:%M:%S'),
-                                        numberOfTicks=NUM_OF_TICKS,
-                                        whatToShow='TRADES',
-                                        useRth=0,
-                                        ignoreSize=False, miscOptions=[])
-            o['lastTime'] = et
-            o['reqId'] = self.tickerId
-            o['retry_count'] = 0
-            logging.warning('-----------reqId=%d %s %s' %
-                            (o['reqId'], contract.localSymbol, et.strftime('%Y%m%d %H:%M:%S')))
-
-        # 删除已经接收完毕的请求数据
-        for o in want_del:
-            self.histTickDataList.remove(o)
 
     # ----------------------------------------------------------------------
     def cancelOrder(self, cancelOrderReq):
@@ -529,8 +332,6 @@ class IbGateway(VtGateway):
 
 
 ########################################################################
-@retry_connect
-@logging_level(level=logging.WARNING)
 class IbWrapper(IbApi):
     """IB回调接口的实现"""
 
@@ -550,8 +351,7 @@ class IbWrapper(IbApi):
         self.contractDict = gateway.contractDict  # contract字典
         self.tickProductDict = gateway.tickProductDict
         self.subscribeReqDict = gateway.subscribeReqDict
-        self.histTickDataList = gateway.histTickDataList
-        self.histTickReqDict = gateway.histTickReqDict
+
 
     # ----------------------------------------------------------------------
     def nextValidId(self, orderId):
@@ -897,50 +697,8 @@ class IbWrapper(IbApi):
         :return:
         """
 
-        val = self.histTickReqDict.pop(reqId) if done else self.histTickReqDict[reqId]  # 如果reqId对应的数据传输完毕，则清除字典中存储的对象。
-        st = val['startDateTime']
-        et = val['endDateTime']
-        tick = val['tickInfo']
+        self.gateway.historicalTicksReq.historicalTicks(reqId,ticks, done)
 
-        t = None
-        num = 0
-        total = 0
-        for o in ticks:
-            dt = datetime.fromtimestamp(o.time)
-
-            # 清洗数据，仅当st<=数据日期<et数据才有效。回调函数传入的ticks是按照时间升序排列的
-            if dt < st:
-                continue
-            if dt > et:
-                break
-
-            if t != dt:
-
-                if t:
-                    total += num
-                    logging.debug('-----------%s %s num=%d' % (tick.symbol, t.strftime('%Y%m%d %H:%M:%S'), num))
-                t = dt
-                num = 0
-
-            num += 1
-
-            tick.time = dt.strftime('%H:%M:%S.%f')
-            tick.date = dt.strftime('%Y%m%d')
-            tick.lastPrice = o.price
-            tick.lastVolume = o.size
-            newtick = copy(tick)
-            self.gateway.onTick(newtick)
-
-        if t:
-            #val['startDateTime'] = t + timedelta(seconds=1)
-
-            t0 = datetime.fromtimestamp(ticks[0].time)
-            val['endDateTime'] = t0 + timedelta(seconds=-1)
-
-            total += num
-            val['totalTicks'] += total
-            logging.warning('-----------reqId=%d %s %s %d total=%d' % (
-            reqId, tick.symbol, t.strftime('%Y%m%d %H:%M:%S'), num, val['totalTicks']))
 
     def historicalTicksLast(self, reqId, ticks, done: bool):
         """

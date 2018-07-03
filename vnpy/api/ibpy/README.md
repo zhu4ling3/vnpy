@@ -24,7 +24,7 @@ IB提供三种精度的实时数据：原始tick级，合成tick级(1秒内多�
 IB提供两种精度的历史数据：原始tick级，Bar级。
 - 原始tick数据。Tick-by-Tick Data。TWS v968+ and API v973.04+之后才支持。形如“TWS Time & Sales Window”界面的数据。
 - Bar级数据。Historical Bar Data。1分钟，5分钟......小时，日，周，月的Bar数据。
-
+- 关于数据的时间。从IB获得的数据的时间的时区同登录TWS/IB Gateway时选择的时区一致。
     
 #实时数据-合成tick数据的请求和接收
 ###用reqMktData()请求数据

@@ -303,7 +303,9 @@ class VtHistoricalTickReq(object):
         self.optionType = EMPTY_UNICODE  # 期权类型
 
         # 以下为历史数据获取所需
-        self.historicalTickParams = {}
+        self.start = None
+        self.end = None
+        self.datatype = []
 
 
 ########################################################################

@@ -2,7 +2,7 @@
 	"fontFamily": "微软雅黑",
 	"fontSize": 12,
 
-	"mongoHost": "localhost",
+	"mongoHost": "vusrv1",
 	"mongoPort": 27017,
 	"mongoLogging": true,
 
@@ -10,7 +10,7 @@
 	"language": "chinese",
 
 	"logActive": true,
-	"logLevel": "info",
+	"logLevel": "warning",
 	"logConsole": true,
 	"logFile": true,
 

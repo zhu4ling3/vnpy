@@ -26,13 +26,14 @@ from vnpy.trader.app.ctaStrategy.ctaTemplate import BarGenerator
 from .hdBase import *
 from .language import text
 
+from vnpy import settings
 
 ########################################################################
 class HdEngine(object):
     """历史数据记录引擎"""
 
-    settingFileName = 'HD_setting.json'
-    settingFilePath = getJsonPath(settingFileName, __file__)
+    # settingFileName = 'HD_setting.json'
+    # settingFilePath = getJsonPath(settingFileName, __file__)
 
     # ----------------------------------------------------------------------
     def __init__(self, mainEngine, eventEngine):
@@ -78,100 +79,75 @@ class HdEngine(object):
 
     def loadSetting(self):
         """加载配置"""
-        with open(self.settingFilePath) as f:
-            drSetting = json.load(f)
-
-            # 如果working设为False则不启动行情记录功能
-            working = drSetting['working']
-            if not working:
-                return
-
-            # Tick记录配置
-            if 'tick' in drSetting:
-                l = drSetting['tick']
-
-                for setting in l:
-                    symbol = setting[0]
-                    gateway = setting[1]
-
-                    vtSymbol = symbol
-
-                    req = VtHistoricalTickReq()
-                    req.symbol = setting[0]
-                    req.gateway = gateway
-
-                    # 针对LTS和IB接口，订阅行情需要交易所代码
-                    if len(setting) >= 3:
-                        req.exchange = setting[2]
-                        vtSymbol = '.'.join([symbol, req.exchange])
-
-                    # 针对IB接口，订阅行情需要货币和产品类型
-                    if len(setting) >= 5:
-                        req.currency = setting[3]
-                        req.productClass = setting[4]
-                        req.historicalTickParams = setting[5]
-
-                    self.mainEngine.subscribe(req, gateway)
-
-                    # tick = VtTickData()           # 该tick实例可以用于缓存部分数据（目前未使用）
-                    # self.tickDict[vtSymbol] = tick
-                    self.tickSymbolSet.add(vtSymbol)
-
-                    # 保存到配置字典中
-                    if vtSymbol not in self.settingDict:
-                        d = {
-                            'symbol': symbol,
-                            'gateway': gateway,
-                            'tick': True
-                        }
-                        self.settingDict[vtSymbol] = d
-                    else:
-                        d = self.settingDict[vtSymbol]
-                        d['tick'] = True
 
 
-            # 分钟线记录配置
-            if 'bar' in drSetting:
-                l = drSetting['bar']
+        drSetting = settings.HISTORICAL_DATA['REQUESTS']
 
-                for setting in l:
-                    symbol = setting[0]
-                    gateway = setting[1]
-                    vtSymbol = symbol
+        # 如果working设为False则不启动行情记录功能
+        working = drSetting['working']
+        if not working:
+            return
 
-                    req = VtHistoricalBarReq()
-                    req.symbol = symbol
 
-                    if len(setting) >= 3:
-                        req.exchange = setting[2]
-                        vtSymbol = '.'.join([symbol, req.exchange])
+        for setting in drSetting['list']:
+            if 'workflag' in setting and not setting['workflag']:
+                continue
 
-                    if len(setting) >= 5:
-                        req.currency = setting[3]
-                        req.productClass = setting[4]
-                        req.historicalBarParams = setting[5]
+            symbol = setting['symbol']
+            gateway = setting['gateway']
+            vtSymbol = symbol
 
-                    self.mainEngine.subscribe(req, gateway)
+            req = VtHistoricalTickReq()
+            req.symbol = symbol
+            req.gateway = gateway
 
-                    # 保存到配置字典中
-                    if vtSymbol not in self.settingDict:
-                        d = {
-                            'symbol': symbol,
-                            'gateway': gateway,
-                            'bar': True
-                        }
-                        self.settingDict[vtSymbol] = d
-                    else:
-                        d = self.settingDict[vtSymbol]
-                        d['bar'] = True
+            # 针对LTS和IB接口，订阅行情需要交易所代码
+            if 'exchange' in setting:
+                req.exchange = setting['exchange']
+                vtSymbol = '.'.join([symbol, req.exchange])
 
-                        # 创建BarManager对象
-                    self.bgDict[vtSymbol] = BarGenerator(self.onBar)
+            if 'currency' in setting:
+                req.currency = setting['currency']
+                req.productClass = setting['sectype']
+                req.start = setting['start']
+                req.end = setting['end']
 
-            # 主力合约记录配置
-            if 'active' in drSetting:
-                d = drSetting['active']
-                self.activeSymbolDict = {vtSymbol: activeSymbol for activeSymbol, vtSymbol in d.items()}
+            if 'tick' in setting['datatype']:
+                self.mainEngine.subscribe(req, gateway)
+
+                # tick = VtTickData()           # 该tick实例可以用于缓存部分数据（目前未使用）
+                # self.tickDict[vtSymbol] = tick
+                self.tickSymbolSet.add(vtSymbol)
+
+                # 保存到配置字典中
+                if vtSymbol not in self.settingDict:
+                    d = {
+                        'symbol': symbol,
+                        'gateway': gateway,
+                        'tick': True,
+                    }
+                    self.settingDict[vtSymbol] = d
+                else:
+                    d = self.settingDict[vtSymbol]
+                    d['tick'] = True
+
+            if 'bar' in setting['datatype']:
+                # 保存到配置字典中
+                if vtSymbol not in self.settingDict:
+                    d = {
+                        'symbol': symbol,
+                        'gateway': gateway,
+                        'bar': True
+                    }
+                    self.settingDict[vtSymbol] = d
+                else:
+                    d = self.settingDict[vtSymbol]
+                    d['bar'] = True
+
+                    # 创建BarManager对象
+                self.bgDict[vtSymbol] = BarGenerator(self.onBar)
+
+
 
     # ----------------------------------------------------------------------
     def getSetting(self):
@@ -189,6 +165,16 @@ class HdEngine(object):
         # 生成datetime对象
         if not tick.datetime:
             tick.datetime = datetime.strptime(' '.join([tick.date, tick.time]), '%Y%m%d %H:%M:%S.%f')
+
+        # IB的历史数据中的原始tick数据只有当前成交量而没有当日总成交量，故需要计算得到。
+        if not 'currentDate' in self.settingDict[vtSymbol]:
+            self.settingDict[vtSymbol]['currentDate'] = tick.datetime.strftime('%Y%m%d')
+
+        if self.settingDict[vtSymbol]['currentDate'] == tick.datetime.strftime('%Y%m%d'):
+            tick.volume += tick.lastVolume
+        else:
+            tick.volume = tick.lastVolume
+            self.settingDict[vtSymbol]['currentDate'] = tick.datetime.strftime('%Y%m%d')
 
         self.onTick(tick)
 
