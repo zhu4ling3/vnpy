@@ -112,40 +112,45 @@ class HdEngine(object):
                 req.start = setting['start']
                 req.end = setting['end']
 
-            if 'tick' in setting['datatype']:
-                self.mainEngine.subscribe(req, gateway)
+            for o in setting['objects']:
 
-                # tick = VtTickData()           # 该tick实例可以用于缓存部分数据（目前未使用）
-                # self.tickDict[vtSymbol] = tick
-                self.tickSymbolSet.add(vtSymbol)
+                if 'type' not in o:
+                    raise Exception('需要指明type')
 
-                # 保存到配置字典中
-                if vtSymbol not in self.settingDict:
-                    d = {
-                        'symbol': symbol,
-                        'gateway': gateway,
-                        'tick': True,
-                    }
-                    self.settingDict[vtSymbol] = d
-                else:
-                    d = self.settingDict[vtSymbol]
-                    d['tick'] = True
+                if o['type'] == 'tick':
+                    self.mainEngine.subscribe(req, gateway)
 
-            if 'bar' in setting['datatype']:
-                # 保存到配置字典中
-                if vtSymbol not in self.settingDict:
-                    d = {
-                        'symbol': symbol,
-                        'gateway': gateway,
-                        'bar': True
-                    }
-                    self.settingDict[vtSymbol] = d
-                else:
-                    d = self.settingDict[vtSymbol]
-                    d['bar'] = True
+                    # tick = VtTickData()           # 该tick实例可以用于缓存部分数据（目前未使用）
+                    # self.tickDict[vtSymbol] = tick
+                    self.tickSymbolSet.add(vtSymbol)
 
-                    # 创建BarManager对象
-                self.bgDict[vtSymbol] = BarGenerator(self.onBar)
+                    # 保存到配置字典中
+                    if vtSymbol not in self.settingDict:
+                        d = {
+                            'symbol': symbol,
+                            'gateway': gateway,
+                            'tick': True,
+                        }
+                        self.settingDict[vtSymbol] = d
+                    else:
+                        d = self.settingDict[vtSymbol]
+                        d['tick'] = True
+
+                    if 'gen' in o:
+                        # 保存到配置字典中
+                        if vtSymbol not in self.settingDict:
+                            d = {
+                                'symbol': symbol,
+                                'gateway': gateway,
+                                'bar': True
+                            }
+                            self.settingDict[vtSymbol] = d
+                        else:
+                            d = self.settingDict[vtSymbol]
+                            d['bar'] = True
+
+                            # 创建BarManager对象
+                        self.bgDict[vtSymbol] = BarGenerator(self.onBar)
 
 
 

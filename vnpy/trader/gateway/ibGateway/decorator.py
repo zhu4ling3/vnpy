@@ -18,7 +18,20 @@ def retry_connect(cls):
 
     return Wrapper
 
+#-----------------------------------------------------------------
+def catch_exception(func=None, ex_list=[]):
+    def decor(f):
+        def wrap(*args, **kwargs):
+            try:
+                f(args, kwargs)
+            except Exception as e:
+                logging.exception(e)
 
+        return wrap
+    if func:
+        return decor(func)
+
+    return decor
 
 def logging_level(func=None, level=logging.INFO):
     def decor(cls):
