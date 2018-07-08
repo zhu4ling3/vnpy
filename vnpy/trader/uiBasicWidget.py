@@ -1145,7 +1145,8 @@ class ContractMonitor(BasicMonitor):
         l = self.mainEngine.getAllContracts()
         d = {'.'.join([contract.exchange, contract.symbol]):contract for contract in l}
         l2 = d.keys()
-        l2.sort(reverse=True)
+        #l2.sort(reverse=True)
+        l2 = sorted(l2, reverse=True) # python3
 
         self.setRowCount(len(l2))
         row = 0
@@ -1319,7 +1320,7 @@ class SettingEditor(QtWidgets.QWidget):
             
             for line in f:
                 line = line.replace('\n', '')   # 移除换行符号
-                line = line.decode('UTF-8')
+#                line = line.decode('UTF-8') # python3
                 self.editSetting.append(line)
     
     #----------------------------------------------------------------------

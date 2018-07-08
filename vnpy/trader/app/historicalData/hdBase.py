@@ -10,6 +10,10 @@ SETTING_DB_NAME = 'VnTrader_Setting_Db'
 TICK_DB_NAME = 'VnTrader_Tick_Db'
 DAILY_DB_NAME = 'VnTrader_Daily_Db'
 MINUTE_DB_NAME = 'VnTrader_1Min_Db'
+BAR_DB_NAME = {
+    '1 min': 'VnTrader_1Min_Db',
+    '1 hour': 'VnTrader_1Hour_Db',
+}
 
 # 行情记录模块事件
 EVENT_HISTORICALDATA_LOG = 'HistoricalDataLog'     # 行情记录日志更新事件

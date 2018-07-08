@@ -112,7 +112,7 @@ accountKeyMap['UnrealizedPnL'] = 'positionProfit'
 accountKeyMap['AvailableFunds'] = 'available'
 accountKeyMap['MaintMarginReq'] = 'margin'
 
-from .historicalData import HistoricalTicksRequest
+from .historicalData import HistoricalTicksRequest, HistoricalBarRequest
 
 
 
@@ -156,6 +156,7 @@ class IbGateway(VtGateway):
 
         # 历史Tick数据的工具类
         self.historicalTicksReq = HistoricalTicksRequest(self)
+        self.historicalBarReq = HistoricalBarRequest(self)
 
         # ----------------------------------------------------------------------
 
@@ -286,8 +287,8 @@ class IbGateway(VtGateway):
             self.historicalTicksReq.subscribe(subscribeReq)
 
         elif isinstance(subscribeReq, VtHistoricalBarReq):
-            # TODO: 请求历史Bar数据
-            pass
+            # 请求历史Bar数据
+            self.historicalBarReq.subscribe(subscribeReq)
 
 
 
@@ -683,8 +684,32 @@ class IbWrapper(IbApi):
         pass
 
     # ----------------------------------------------------------------------
-    def historicalData(self, reqId, date, open_, high, low, close, volume, barCount, WAP, hasGaps):
-        """"""
+    def historicalData(self, reqId, bar):
+        """ returns the requested historical data bars
+
+        reqId - the request's identifier
+        date  - the bar's date and time (either as a yyyymmss hh:mm:ssformatted
+             string or as system time according to the request)
+        open  - the bar's open point
+        high  - the bar's high point
+        low   - the bar's low point
+        close - the bar's closing point
+        volume - the bar's traded volume if available
+        count - the number of trades during the bar's timespan (only available
+            for TRADES).
+        WAP -   the bar's Weighted Average Price
+        hasGaps  -indicates if the data has gaps or not. """
+
+        self.gateway.historicalBarReq.historicalData(reqId, bar)
+
+
+    def historicalDataEnd(self, reqId, start, end):
+        """ Marks the ending of the historical bars reception. """
+        self.gateway.historicalBarReq.historicalDataEnd(reqId, start, end)
+
+
+    def historicalDataUpdate(self, reqId, bar):
+        """returns updates in real time when keepUpToDate is set to True"""
         pass
 
     def historicalTicks(self, reqId, ticks, done: bool):

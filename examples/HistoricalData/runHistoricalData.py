@@ -13,7 +13,7 @@ from vnpy.trader.vtEvent import EVENT_LOG, EVENT_ERROR, EVENT_TIMER
 from vnpy.trader.vtEngine import MainEngine, LogEngine
 from vnpy.trader.gateway import ibGateway
 from vnpy.trader.app import historicalData
-
+from vnpy import settings
 
 #----------------------------------------------------------------------
 def processErrorEvent(event):
@@ -34,10 +34,10 @@ def runChildProcess():
     le.setLogLevel(le.LEVEL_INFO)
     le.addConsoleHandler()
     le.info(u'启动行情记录运行子进程')
-    
+
     ee = EventEngine2()
     le.info(u'事件引擎创建成功')
-    
+
     me = MainEngine(ee)
     me.addGateway(ibGateway)
     me.addApp(historicalData)
@@ -65,7 +65,7 @@ def runParentProcess():
     le.addConsoleHandler()
     le.info(u'启动行情记录守护父进程')
     
-    tz = timezone('America/New_York')
+    tz = timezone(settings.HISTORICAL_DATA['TIME_ZONE'])
     DAY_START = time(8, 42, tzinfo=tz)         # 日盘启动和停止时间
     DAY_END = time(15, 18, tzinfo=tz)
     NIGHT_START = time(20, 57, tzinfo=tz)      # 夜盘启动和停止时间

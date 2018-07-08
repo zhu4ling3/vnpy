@@ -93,24 +93,24 @@ class HdEngine(object):
             if 'workflag' in setting and not setting['workflag']:
                 continue
 
-            symbol = setting['symbol']
-            gateway = setting['gateway']
-            vtSymbol = symbol
-
-            req = VtHistoricalTickReq()
-            req.symbol = symbol
-            req.gateway = gateway
-
-            # 针对LTS和IB接口，订阅行情需要交易所代码
-            if 'exchange' in setting:
-                req.exchange = setting['exchange']
-                vtSymbol = '.'.join([symbol, req.exchange])
-
-            if 'currency' in setting:
-                req.currency = setting['currency']
-                req.productClass = setting['sectype']
-                req.start = setting['start']
-                req.end = setting['end']
+            # symbol = setting['symbol']
+            # gateway = setting['gateway']
+            # vtSymbol = symbol
+            #
+            # req = VtHistoricalTickReq()
+            # req.symbol = symbol
+            # req.gateway = gateway
+            #
+            # # 针对LTS和IB接口，订阅行情需要交易所代码
+            # if 'exchange' in setting:
+            #     req.exchange = setting['exchange']
+            #     vtSymbol = '.'.join([symbol, req.exchange])
+            #
+            # if 'currency' in setting:
+            #     req.currency = setting['currency']
+            #     req.productClass = setting['sectype']
+            #     req.start = setting['start']
+            #     req.end = setting['end']
 
             for o in setting['objects']:
 
@@ -118,6 +118,27 @@ class HdEngine(object):
                     raise Exception('需要指明type')
 
                 if o['type'] == 'tick':
+
+                    symbol = setting['symbol']
+                    gateway = setting['gateway']
+                    vtSymbol = symbol
+
+                    req = VtHistoricalTickReq()
+                    req.symbol = symbol
+                    req.gateway = gateway
+
+                    # 针对LTS和IB接口，订阅行情需要交易所代码
+                    if 'exchange' in setting:
+                        req.exchange = setting['exchange']
+                        vtSymbol = '.'.join([symbol, req.exchange])
+
+                    if 'currency' in setting:
+                        req.currency = setting['currency']
+                        req.productClass = setting['sectype']
+                        req.start = setting['start']
+                        req.end = setting['end']
+
+
                     self.mainEngine.subscribe(req, gateway)
 
                     # tick = VtTickData()           # 该tick实例可以用于缓存部分数据（目前未使用）
@@ -151,6 +172,31 @@ class HdEngine(object):
 
                             # 创建BarManager对象
                         self.bgDict[vtSymbol] = BarGenerator(self.onBar)
+                elif o['type'] == 'bar':
+                    symbol = setting['symbol']
+                    gateway = setting['gateway']
+                    vtSymbol = symbol
+
+                    req = VtHistoricalBarReq()
+                    req.symbol = symbol
+                    req.gateway = gateway
+
+                    # 针对LTS和IB接口，订阅行情需要交易所代码
+                    if 'exchange' in setting:
+                        req.exchange = setting['exchange']
+                        vtSymbol = '.'.join([symbol, req.exchange])
+
+                    if 'currency' in setting:
+                        req.currency = setting['currency']
+                        req.productClass = setting['sectype']
+                        req.start = setting['start']
+                        req.end = setting['end']
+
+                    req.size = o['size']
+
+                    self.mainEngine.subscribe(req, gateway)
+
+
 
 
 
@@ -187,6 +233,24 @@ class HdEngine(object):
         if bm:
             bm.updateTick(tick)
 
+
+    # ----------------------------------------------------------------------
+    def procecssBarEvent(self, event):
+        """处理行情事件"""
+        bar = event.dict_['data']
+        vtSymbol = bar.vtSymbol
+
+        # 生成datetime对象
+        if not bar.datetime:
+            bar.datetime = datetime.strptime(' '.join([bar.date, bar.time]), '%Y%m%d %H:%M:%S.%f')
+
+
+        self.onBar(bar)
+
+
+
+
+
     # ----------------------------------------------------------------------
     def onTick(self, tick):
         """Tick更新"""
@@ -210,11 +274,15 @@ class HdEngine(object):
         """分钟线更新"""
         vtSymbol = bar.vtSymbol
 
-        self.insertData(MINUTE_DB_NAME, vtSymbol, bar)
+        if bar.size in BAR_DB_NAME:
+            dbname = BAR_DB_NAME[bar.size]
+        else:
+            dbname = BAR_DB_NAME['1 min']
+        self.insertData(dbname, vtSymbol, bar)
 
         if vtSymbol in self.activeSymbolDict:
             activeSymbol = self.activeSymbolDict[vtSymbol]
-            self.insertData(MINUTE_DB_NAME, activeSymbol, bar)
+            self.insertData(dbname, activeSymbol, bar)
 
         self.writeDrLog(text.BAR_LOGGING_MESSAGE.format(symbol=bar.vtSymbol,
                                                         time=bar.time,
@@ -223,11 +291,15 @@ class HdEngine(object):
                                                         low=bar.low,
                                                         close=bar.close))
 
-        # ----------------------------------------------------------------------
-
+    # ----------------------------------------------------------------------
     def registerEvent(self):
         """注册事件监听"""
         self.eventEngine.register(EVENT_TICK, self.procecssTickEvent)
+
+    # ----------------------------------------------------------------------
+    def registerEvent(self):
+        """注册事件监听"""
+        self.eventEngine.register(EVENT_BAR, self.procecssBarEvent)
 
     # ----------------------------------------------------------------------
     def insertData(self, dbName, collectionName, data):

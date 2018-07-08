@@ -102,6 +102,9 @@ class VtBarData(VtBaseData):
         self.volume = EMPTY_INT  # 成交量
         self.openInterest = EMPTY_INT  # 持仓量
 
+        # 2018-07-05 ZL
+        self.size = '' # Bar类型，1min，1hour等
+
 
 ########################################################################
 class VtTradeData(VtBaseData):
@@ -305,7 +308,7 @@ class VtHistoricalTickReq(object):
         # 以下为历史数据获取所需
         self.start = None
         self.end = None
-        self.datatype = []
+        # self.datatype = []
 
 
 ########################################################################
@@ -354,8 +357,9 @@ class VtHistoricalBarReq(object):
         self.optionType = EMPTY_UNICODE  # 期权类型
 
         # 以下为历史数据获取所需
-        self.historicalBarParams = {}
-
+        self.start = None
+        self.end = None
+        self.size = None
 
 
 ########################################################################
