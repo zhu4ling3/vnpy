@@ -22,7 +22,8 @@ import logging
 # from vnpy.api.ib import *
 from vnpy.trader.vtGateway import *
 from vnpy.trader.vtFunction import getJsonPath
-from vnpy.trader.vtEvent import EVENT_TIMER
+from vnpy.trader.vtEngine import Event
+from vnpy.trader.vtEvent import EVENT_LOG
 from .language import text
 
 from vnpy.api.ibpy import *
@@ -192,7 +193,7 @@ class IbGateway(VtGateway):
         self.api.connect(self.host, self.port, self.clientId)
 
         # 建立连接后，启动收取队列数据的主循环过程。这个过程是在独立的子进程里面执行的。
-        # self.api.start()
+        self.api.start()
 
         # 查询服务器时间
         self.api.reqCurrentTime()
@@ -321,15 +322,21 @@ class IbGateway(VtGateway):
         self.api.disconnect()
 
     # ----------------------
-    def start(self):
-        """
+    # def start(self):
+    #     """
+    #
+    #     :return:
+    #     """
+    #     if self.api.isConnected() == True:
+    #         self.api.run()
+    #     else:
+    #         raise Exception('start() method must be called after connection')
 
-        :return:
-        """
-        if self.api.isConnected() == True:
-            self.api.run()
-        else:
-            raise Exception('start() method must be called after connection')
+    # ----------------------------------------------------------------------
+    def onProgress(self, info):
+        event = Event(type_ = EVENT_LOG+'.histLog')
+        event.dict_['data'] = info
+        self.eventEngine.put(event)
 
 
 ########################################################################

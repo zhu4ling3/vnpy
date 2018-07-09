@@ -23,7 +23,17 @@ REQ_DATA_TYPE_MAP = {
 
 # 发出历史数据请求时，根据数据粒度的大小，决定一次请求的期间长短
 REQ_STEP_SIZE_MAP = {
+    '1 sec': {'durationString': '1800 S', 'barSizeSetting': '1 sec', },
+    '5 secs': {'durationString': '3600 S', 'barSizeSetting': '5 secs', },
+    '10 secs': {'durationString': '14400 S', 'barSizeSetting': '10 secs', },
+    '30 secs': {'durationString': '28800 S', 'barSizeSetting': '30 secs', },
+    '1 min': {'durationString': '1 D', 'barSizeSetting': '1 min', },
+    '10 mins': {'durationString': '1 W', 'barSizeSetting': '10 mins', },
     '1 hour': {'durationString': '1 M', 'barSizeSetting': '1 hour', },
+    '4 hours': {'durationString': '1 M', 'barSizeSetting': '4 hours', },
+    '1 day': {'durationString': '1 Y', 'barSizeSetting': '1 day', },
+    '1 week': {'durationString': '1 Y', 'barSizeSetting': '1 week', },
+    '1 month': {'durationString': '1 Y', 'barSizeSetting': '1 month', },
 }
 
 
@@ -37,7 +47,7 @@ class HistoricalTicksRequest(object):
         self.histTickReqDict = {}
 
         self.gateway = ibgw
-        # setattr(self.gateway.api, '', self.__historicalTicks)
+        self.isRunning = False
 
     # ------------------------------------------------------------------------------
     def subscribe(self, req: VtHistoricalTickReq):
@@ -83,6 +93,9 @@ class HistoricalTicksRequest(object):
 
         :return:
         """
+
+        if not self.isRunning:
+            return
 
         # Timer事件是1秒一次，在本方法中可以控制向IB请求历史数据的频率为ONE_CALL_INTERNAL秒一次。
         ONE_CALL_INTERNAL = 1
@@ -220,16 +233,30 @@ class HistoricalTicksRequest(object):
             logging.info('-----------reqId=%d %s %s %d total=%d' %
                          (reqId, tick.symbol, t.strftime('%Y%m%d %H:%M:%S'), num, val['totalTicks']))
 
+            info = {}
+            info['type'] = 'tick'
+            info['vtSymbol'] = tick.symbol
+            info['time'] = t.strftime('%Y%m%d %H:%M:%S')
+            info['total'] = val['totalTicks']
+            self.gateway.onProgress(info)
+
         # 如果endDateTime等于lastTime，就表示本次请求的响应数据里面没有包含有效数据。（可能包含了startDateTime～endDateTime之外的数据）
         # 如果done又同时为真，那么就可以推论出所有数据都已经获得。
         if val['endDateTime'] == val['lastTime'] and done:
             val['endDateTime'] = val['startDateTime'] + timedelta(seconds=-1)
 
+    #--------------------------------------------------------------
+    def setRunning(self, flag):
+        self.isRunning = flag
+
+    #--------------------------------------------------------------
+    def getRunning(self):
+        return self.isRunning
+
+
 
 @logging_level(level=logging.INFO)
 class HistoricalBarRequest(object):
-
-
 
 
     def __init__(self, ibgw):
@@ -241,6 +268,8 @@ class HistoricalBarRequest(object):
         self.__barBufferDict = {}
 
         self.gateway = ibgw
+
+        self.isRunning= True
 
     # ------------------------------------------------------------------------------
     def subscribe(self, req: VtHistoricalBarReq):
@@ -287,6 +316,9 @@ class HistoricalBarRequest(object):
 
         :return:
         """
+
+        if not self.isRunning:
+            return
 
         # Timer事件是1秒一次，在本方法中可以控制向IB请求历史数据的频率为ONE_CALL_INTERNAL秒一次。
         ONE_CALL_INTERNAL = 1
@@ -446,7 +478,24 @@ class HistoricalBarRequest(object):
             logging.info('-----------reqId=%d %s %s %d total=%d' %
                          (reqId, bar.symbol, t.strftime('%Y%m%d %H:%M:%S'), num, val['totalTicks']))
 
+            info = {}
+            info['type'] = 'bar'
+            info['vtSymbol'] = bar.symbol
+            info['time'] = t.strftime('%Y%m%d %H:%M:%S')
+            info['total'] = val['totalTicks']
+            self.gateway.onProgress(info)
+
         # 如果endDateTime等于lastTime，就表示本次请求的响应数据里面没有包含有效数据。（可能包含了startDateTime～endDateTime之外的数据）
         # 如果done又同时为真，那么就可以推论出所有数据都已经获得。
         if val['endDateTime'] == val['lastTime']:
             val['endDateTime'] = val['startDateTime'] + timedelta(seconds=-1)
+
+    #--------------------------------------------------------------
+    def setRunning(self, flag):
+        self.isRunning = flag
+
+    #--------------------------------------------------------------
+    def getRunning(self):
+        return self.isRunning
+
+

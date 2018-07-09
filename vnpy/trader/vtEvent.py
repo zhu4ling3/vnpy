@@ -19,3 +19,4 @@ EVENT_ACCOUNT = 'eAccount.'             # 账户回报事件
 EVENT_CONTRACT = 'eContract.'           # 合约基础信息回报事件
 EVENT_ERROR = 'eError.'                 # 错误回报事件
 EVENT_BAR = 'eBar'                      # BAR行情事件，可后接具体的vtSymbol。用于接收历史行情数据
+

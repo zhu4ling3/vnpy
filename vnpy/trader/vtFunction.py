@@ -27,7 +27,7 @@ def safeUnicode(value):
             value = round(value, ndigits=MAX_DECIMAL)
     
     #return unicode(value)
-    return value
+    return str(value) # python3
 
 #----------------------------------------------------------------------
 def todayDate():

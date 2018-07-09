@@ -4,7 +4,7 @@ DATA_RECORDER = u'行情记录'
 
 TICK_RECORD = u'Tick记录'
 BAR_RECORD = u'Bar记录'
-TICK_RECORD = u'Tick记录'
+
 
 CONTRACT_SYMBOL = u'合约代码'
 GATEWAY = u'接口'

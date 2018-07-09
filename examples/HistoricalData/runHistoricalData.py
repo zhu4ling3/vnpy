@@ -51,10 +51,10 @@ def runChildProcess():
     le.info(u'连接IB接口')
 
     # 建立连接后，启动收取队列数据的主循环过程。这个过程是在独立的子进程里面执行的。
-    me.getGateway(ibGateway.gatewayName).start()
+    # me.getGateway(ibGateway.gatewayName).start()
 
-    # while True:
-    #     sleep(1)
+    while True:
+        sleep(1)
 
 #----------------------------------------------------------------------
 def runParentProcess():

@@ -93,25 +93,6 @@ class HdEngine(object):
             if 'workflag' in setting and not setting['workflag']:
                 continue
 
-            # symbol = setting['symbol']
-            # gateway = setting['gateway']
-            # vtSymbol = symbol
-            #
-            # req = VtHistoricalTickReq()
-            # req.symbol = symbol
-            # req.gateway = gateway
-            #
-            # # 针对LTS和IB接口，订阅行情需要交易所代码
-            # if 'exchange' in setting:
-            #     req.exchange = setting['exchange']
-            #     vtSymbol = '.'.join([symbol, req.exchange])
-            #
-            # if 'currency' in setting:
-            #     req.currency = setting['currency']
-            #     req.productClass = setting['sectype']
-            #     req.start = setting['start']
-            #     req.end = setting['end']
-
             for o in setting['objects']:
 
                 if 'type' not in o:
@@ -151,6 +132,8 @@ class HdEngine(object):
                             'symbol': symbol,
                             'gateway': gateway,
                             'tick': True,
+                            'start': req.start,
+                            'end': req.end,
                         }
                         self.settingDict[vtSymbol] = d
                     else:
@@ -163,7 +146,10 @@ class HdEngine(object):
                             d = {
                                 'symbol': symbol,
                                 'gateway': gateway,
-                                'bar': True
+                                'bar': True,
+                                'start': req.start,
+                                'end': req.end,
+                                'size': '1 min',
                             }
                             self.settingDict[vtSymbol] = d
                         else:
@@ -196,7 +182,19 @@ class HdEngine(object):
 
                     self.mainEngine.subscribe(req, gateway)
 
-
+                    if vtSymbol+req.size not in self.settingDict:
+                        d = {
+                            'symbol': symbol,
+                            'gateway': gateway,
+                            'bar': True,
+                            'size': req.size,
+                            'start': req.start,
+                            'end': req.end,
+                        }
+                        self.settingDict[vtSymbol+req.size] = d
+                    else:
+                        d = self.settingDict[vtSymbol]
+                        d['bar'] = True
 
 
 
@@ -263,11 +261,11 @@ class HdEngine(object):
                 activeSymbol = self.activeSymbolDict[vtSymbol]
                 self.insertData(TICK_DB_NAME, activeSymbol, tick)
 
-            self.writeDrLog(text.TICK_LOGGING_MESSAGE.format(symbol=tick.vtSymbol,
-                                                             time=tick.time,
-                                                             last=tick.lastPrice,
-                                                             bid=tick.bidPrice1,
-                                                             ask=tick.askPrice1))
+            # self.writeDrLog(text.TICK_LOGGING_MESSAGE.format(symbol=tick.vtSymbol,
+            #                                                  time=tick.time,
+            #                                                  last=tick.lastPrice,
+            #                                                  bid=tick.bidPrice1,
+            #                                                  ask=tick.askPrice1))
 
     # ----------------------------------------------------------------------
     def onBar(self, bar):
@@ -284,22 +282,20 @@ class HdEngine(object):
             activeSymbol = self.activeSymbolDict[vtSymbol]
             self.insertData(dbname, activeSymbol, bar)
 
-        self.writeDrLog(text.BAR_LOGGING_MESSAGE.format(symbol=bar.vtSymbol,
-                                                        time=bar.time,
-                                                        open=bar.open,
-                                                        high=bar.high,
-                                                        low=bar.low,
-                                                        close=bar.close))
+        # self.writeDrLog(text.BAR_LOGGING_MESSAGE.format(symbol=bar.vtSymbol,
+        #                                                 time=bar.time,
+        #                                                 open=bar.open,
+        #                                                 high=bar.high,
+        #                                                 low=bar.low,
+        #                                                 close=bar.close))
 
     # ----------------------------------------------------------------------
     def registerEvent(self):
         """注册事件监听"""
         self.eventEngine.register(EVENT_TICK, self.procecssTickEvent)
-
-    # ----------------------------------------------------------------------
-    def registerEvent(self):
-        """注册事件监听"""
         self.eventEngine.register(EVENT_BAR, self.procecssBarEvent)
+
+
 
     # ----------------------------------------------------------------------
     def insertData(self, dbName, collectionName, data):
