@@ -131,6 +131,7 @@ class HdEngineManager(QtWidgets.QWidget):
         log = event.dict_['data']
         # content = '\t'.join([log.logTime, log.logContent])
         content = '\t'.join([str(k)+'='+str(v) for k,v in log.items()])
+        content = '%(vtSymbol)s\t%(type)s\t%(size)s\t%(stime)s\t%(etime)s\t%(total)d' % log
         self.logMonitor.append(content)
 
     # ----------------------------------------------------------------------

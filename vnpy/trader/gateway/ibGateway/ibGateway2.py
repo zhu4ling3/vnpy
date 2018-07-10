@@ -146,7 +146,8 @@ class IbGateway(VtGateway):
 
         self.contractDict = {}  # 合约字典
 
-        self.subscribeReqDict = {}  # 用来保存订阅请求的字典
+        # self.subscribeReqDict = {}  # 用来保存订阅请求的字典
+        self.subscribeReqList = []
 
         self.connected = False  # 连接状态
 
@@ -243,7 +244,8 @@ class IbGateway(VtGateway):
 
         # TODO： 改写本方法，使得适用获取历史数据
         if not self.connected:
-            self.subscribeReqDict[subscribeReq.symbol] = subscribeReq
+            # self.subscribeReqDict[subscribeReq.symbol] = subscribeReq
+            self.subscribeReqList.append(subscribeReq)
             return
 
         if isinstance(subscribeReq, VtSubscribeReq):
@@ -358,8 +360,8 @@ class IbWrapper(IbApi):
         self.accountDict = gateway.accountDict  # account字典
         self.contractDict = gateway.contractDict  # contract字典
         self.tickProductDict = gateway.tickProductDict
-        self.subscribeReqDict = gateway.subscribeReqDict
-
+        # self.subscribeReqDict = gateway.subscribeReqDict
+        self.subscribeReqList = gateway.subscribeReqList
 
     # ----------------------------------------------------------------------
     def nextValidId(self, orderId):
@@ -385,13 +387,20 @@ class IbWrapper(IbApi):
         #     del self.subscribeReqDict[symbol]
         #     self.gateway.subscribe(req)
 
+        # keys = []
+        # for symbol, req in self.subscribeReqDict.items():
+        #     keys.append(symbol)
+        #     self.gateway.subscribe(req)
+        #
+        # for key in keys:
+        #     del self.subscribeReqDict[key]
+
         keys = []
-        for symbol, req in self.subscribeReqDict.items():
-            keys.append(symbol)
+        for req in self.subscribeReqList:
+            keys.append(req)
             self.gateway.subscribe(req)
 
-        for key in keys:
-            del self.subscribeReqDict[key]
+        self.subscribeReqList.clear()
 
     # ----------------------------------------------------------------------
     def connectAck(self):

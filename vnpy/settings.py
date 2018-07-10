@@ -30,13 +30,13 @@ HISTORICAL_DATA = {
                 ],
             },
             {
-                'workflag': False,
+                'workflag': True,
                 'symbol': 'USD.JPY',
                 'gateway': 'IB',
                 'exchange': 'IDEALPRO',
                 'currency': 'JPY',
                 'sectype': '外汇',
-                'start': '20180703 00:00:00',
+                'start': '20170101 00:00:00',
                 'end': '20180703 11:00:00',
                 'objects': [
                     {'type': 'bar', 'size': '1 hour'},
@@ -52,8 +52,9 @@ HISTORICAL_DATA = {
                 'start': '20170101 00:00:00',
                 'end': '20180703 11:00:00',
                 'objects': [
-                    #{'type': 'bar', 'size': '1 hour'},
-                    #{'type': 'bar', 'size': '4 hours'},
+                    {'type':'tick'},
+                    {'type': 'bar', 'size': '1 hour'},
+                    {'type': 'bar', 'size': '4 hours'},
                     {'type': 'bar', 'size': '1 day'},
                 ],
             },

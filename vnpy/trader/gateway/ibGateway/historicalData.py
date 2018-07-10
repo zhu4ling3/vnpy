@@ -193,6 +193,7 @@ class HistoricalTicksRequest(object):
         tick = val['tickInfo']
 
         t = None
+        t1 = None  # 记录第一个有效数据的时间
         num = 0
         total = 0
         for o in ticks:
@@ -204,6 +205,9 @@ class HistoricalTicksRequest(object):
                 continue
             if dt > et:
                 break
+
+            if t1 == None:
+                t1 = dt
 
             if t != dt:
 
@@ -234,9 +238,11 @@ class HistoricalTicksRequest(object):
                          (reqId, tick.symbol, t.strftime('%Y%m%d %H:%M:%S'), num, val['totalTicks']))
 
             info = {}
+            info['vtSymbol'] = tick.vtSymbol
             info['type'] = 'tick'
-            info['vtSymbol'] = tick.symbol
-            info['time'] = t.strftime('%Y%m%d %H:%M:%S')
+            info['size'] = 'n/a'
+            info['stime'] = t1.strftime('%Y%m%d %H:%M:%S')
+            info['etime'] = t.strftime('%Y%m%d %H:%M:%S')
             info['total'] = val['totalTicks']
             self.gateway.onProgress(info)
 
@@ -269,7 +275,7 @@ class HistoricalBarRequest(object):
 
         self.gateway = ibgw
 
-        self.isRunning= True
+        self.isRunning= False
 
     # ------------------------------------------------------------------------------
     def subscribe(self, req: VtHistoricalBarReq):
@@ -434,17 +440,27 @@ class HistoricalBarRequest(object):
         bars = self.__barBufferDict.pop(reqId)
 
         t = None
+        t1 = None # 记录第一个有效数据的时间
         num = 0
         total = 0
         for o in bars:
+
+            # 如果请求的是日线数据，则数据日期格式为yyyyMMDD，否则由formatDate参数指定（本程序指定为unix时间戳。
+            if bar.size == '1 day':
+                o.date = datetime.strptime(o.date, '%Y%m%d').timestamp()
+
             # IB返回来的数据的时区和登录TWS/IB Gateway时选择的时区一致。此时区必须配置在settings中。
             dt = datetime.fromtimestamp(int(o.date), tz=pytz.timezone(settings.HISTORICAL_DATA['TIME_ZONE']))
+
 
             # 清洗数据，仅当st<=数据日期<et数据才有效。回调函数传入的ticks是按照时间升序排列的
             if dt < st:
                 continue
             if dt > et:
                 break
+
+            if t1 == None:
+                t1 = dt
 
             if t != dt:
 
@@ -479,9 +495,11 @@ class HistoricalBarRequest(object):
                          (reqId, bar.symbol, t.strftime('%Y%m%d %H:%M:%S'), num, val['totalTicks']))
 
             info = {}
+            info['vtSymbol'] = bar.vtSymbol
             info['type'] = 'bar'
-            info['vtSymbol'] = bar.symbol
-            info['time'] = t.strftime('%Y%m%d %H:%M:%S')
+            info['size'] = bar.size
+            info['stime'] = t1.strftime('%Y%m%d %H:%M:%S')
+            info['etime'] = t.strftime('%Y%m%d %H:%M:%S')
             info['total'] = val['totalTicks']
             self.gateway.onProgress(info)
 
