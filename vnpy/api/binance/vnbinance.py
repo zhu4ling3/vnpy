@@ -547,12 +547,12 @@ class BinanceApi(object):
     #----------------------------------------------------------------------
     def onDataStreamError(self, msg):
         """"""
-        print msg
+        print(msg)
     
     #----------------------------------------------------------------------
     def onMarketData(self, data):
         """"""
-        print data
+        print(data)
         
     #----------------------------------------------------------------------
     def initUserStream(self, key):
@@ -608,12 +608,12 @@ class BinanceApi(object):
     #----------------------------------------------------------------------
     def onUserStreamError(self, msg):
         """"""
-        print msg
+        print(msg)
     
     #----------------------------------------------------------------------
     def onUserData(self, data):
         """"""
-        print data
+        print(data)
     
     #----------------------------------------------------------------------
     def runKeepalive(self):
