@@ -16,6 +16,7 @@ class IbApi(EClient, EWrapper):
     #------------------------------------------------------------
     def start(self):
         if self.isConnected()==True:
-            self.thread.start()
+            if self.thread.isAlive()==False:
+                self.thread.start()
         else:
             raise Exception('start() method must be called after connection')

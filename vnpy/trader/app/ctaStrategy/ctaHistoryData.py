@@ -84,7 +84,7 @@ def loadMcCsv(fileName, dbName, symbol):
     collection.ensure_index([('datetime', pymongo.ASCENDING)], unique=True)   
     
     # 读取数据和插入到数据库
-    reader = csv.DictReader(file(fileName, 'r'))
+    reader = csv.DictReader(open(fileName, 'r'))
     for d in reader:
         bar = VtBarData()
         bar.vtSymbol = symbol

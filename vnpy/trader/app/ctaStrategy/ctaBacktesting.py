@@ -299,9 +299,12 @@ class BacktestingEngine(object):
             sellCrossPrice = self.tick.bidPrice1
             buyBestCrossPrice = self.tick.askPrice1
             sellBestCrossPrice = self.tick.bidPrice1
-        
+
+        loop = 0
+        while loop <= len(self.workingLimitOrderDict)-1:
+            orderID, order = list(self.workingLimitOrderDict.items())[loop]
         # 遍历限价单字典中的所有限价单
-        for orderID, order in self.workingLimitOrderDict.items():
+        # for orderID, order in self.workingLimitOrderDict.items():
             # 推送委托进入队列（未成交）的状态更新
             if not order.status:
                 order.status = STATUS_NOTTRADED
@@ -356,7 +359,8 @@ class BacktestingEngine(object):
                 # 从字典中删除该限价单
                 if orderID in self.workingLimitOrderDict:
                     del self.workingLimitOrderDict[orderID]
-                
+
+            loop += 1
     #----------------------------------------------------------------------
     def crossStopOrder(self):
         """基于最新数据撮合停止单"""
@@ -371,7 +375,14 @@ class BacktestingEngine(object):
             bestCrossPrice = self.tick.lastPrice
         
         # 遍历停止单字典中的所有停止单
-        for stopOrderID, so in self.workingStopOrderDict.items():
+        if self.workingStopOrderDict == {}:
+            return
+
+        loop = 0
+        while loop <= len(self.workingStopOrderDict)-1:
+            stopOrderID, so = list(self.workingStopOrderDict.items())[loop]
+
+        # for stopOrderID, so in self.workingStopOrderDict.items(): # python3
             # 判断是否会成交
             buyCross = so.direction==DIRECTION_LONG and so.price<=buyCrossPrice
             sellCross = so.direction==DIRECTION_SHORT and so.price>=sellCrossPrice
@@ -430,7 +441,9 @@ class BacktestingEngine(object):
                 self.strategy.onStopOrder(so)
                 self.strategy.onOrder(order)
                 self.strategy.onTrade(trade)
-    
+
+            loop += 1
+
     #------------------------------------------------
     # 策略接口相关
     #------------------------------------------------      
@@ -832,7 +845,8 @@ class BacktestingEngine(object):
             del d['posList'][-1]
         tradeTimeIndex = [item.strftime("%m/%d %H:%M:%S") for item in d['tradeTimeList']]
         xindex = np.arange(0, len(tradeTimeIndex), np.int(len(tradeTimeIndex)/10))
-        tradeTimeIndex = map(lambda i: tradeTimeIndex[i], xindex)
+        # tradeTimeIndex = map(lambda i: tradeTimeIndex[i], xindex) # python3
+        tradeTimeIndex = list(map(lambda i: tradeTimeIndex[i], xindex))
         pPos.plot(d['posList'], color='k', drawstyle='steps-pre')
         pPos.set_ylim(-1.2, 1.2)
         plt.sca(pPos)

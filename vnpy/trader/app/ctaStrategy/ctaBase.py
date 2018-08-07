@@ -27,7 +27,7 @@ SETTING_DB_NAME = 'VnTrader_Setting_Db'
 POSITION_DB_NAME = 'VnTrader_Position_Db'
 
 TICK_DB_NAME = 'VnTrader_Tick_Db'
-DAILY_DB_NAME = 'VnTrader_Daily_Db'
+DAY_DB_NAME = 'VnTrader_1Day_Db'
 MINUTE_DB_NAME = 'VnTrader_1Min_Db'
 
 # 引擎类型，用于区分当前策略的运行环境
