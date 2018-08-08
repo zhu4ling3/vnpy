@@ -5,6 +5,8 @@ import mpl_finance as mpf
 import matplotlib.dates as mpd
 import pymongo
 import pytz
+import talib
+import numpy as np
 
 str2date =lambda x: mpd.date2num(datetime.datetime.strptime(x, '%m/%d/%Y').date())
 
@@ -36,14 +38,23 @@ quotes = [ [mpd.date2num(r['datetime']), r['open'], r['high'], r['low'], r['clos
 
 print(quotes)
 
+DAYS = 200
+sma = talib.SMA(np.array([o[4] for o in quotes]),DAYS)
+dat = np.array([o[0] for o in quotes])
+
+
 fig,ax = plt.subplots(figsize=(6,4), facecolor=(0.5, 0.5, 0.5))
 fig.subplots_adjust(bottom=0.2)
-mpf.candlestick_ohlc(ax,quotes,width=0.4/(24*60),colorup='g',colordown='r')
+
+# mpf.candlestick_ohlc(ax,quotes,width=0.4/(24*60),colorup='g',colordown='r')
+mpf.candlestick_ohlc(ax,quotes,width=0.4,colorup='g',colordown='r')
 plt.grid(False)
 ax.xaxis_date()
 ax.autoscale_view()
 plt.setp(plt.gca().get_xticklabels(), rotation=30)
-plt.title("Shanghai Index")
+plt.plot(dat[DAYS:-1], sma[DAYS:-1],  'r-')
+
+plt.title("BABA")
 plt.xlabel("Date")
 plt.ylabel("Price")
 plt.show()
