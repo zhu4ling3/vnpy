@@ -38,23 +38,35 @@ quotes = [ [mpd.date2num(r['datetime']), r['open'], r['high'], r['low'], r['clos
 
 print(quotes)
 
-DAYS = 200
-sma = talib.SMA(np.array([o[4] for o in quotes]),DAYS)
+DAYS200 = 200
+DAYS60 = 60
+sma200 = talib.SMA(np.array([o[4] for o in quotes]),DAYS200)
+sma60 = talib.SMA(np.array([o[4] for o in quotes]),DAYS60)
 dat = np.array([o[0] for o in quotes])
 
 
-fig,ax = plt.subplots(figsize=(6,4), facecolor=(0.5, 0.5, 0.5))
+fig, (ax1, ax2) = plt.subplots(nrows=2, ncols=1, figsize=(6,4), facecolor=(0.5, 0.5, 0.5))
 fig.subplots_adjust(bottom=0.2)
 
+
 # mpf.candlestick_ohlc(ax,quotes,width=0.4/(24*60),colorup='g',colordown='r')
-mpf.candlestick_ohlc(ax,quotes,width=0.4,colorup='g',colordown='r')
-plt.grid(False)
-ax.xaxis_date()
-ax.autoscale_view()
-plt.setp(plt.gca().get_xticklabels(), rotation=30)
-plt.plot(dat[DAYS:-1], sma[DAYS:-1],  'r-')
+mpf.candlestick_ohlc(ax1,quotes,width=0.4,colorup='g',colordown='r')
+ax1.xaxis_date()
+ax1.autoscale_view()
+ax1.plot(dat[DAYS200:-1], sma200[DAYS200:-1],  'r-')
+ax1.plot(dat[DAYS60:-1], sma60[DAYS60:-1],  'b-')
+
+# pCandle = plt.subplot(2,1,1)
+# pCandle.grid(False)
+# pCandle.plot(dat[DAYS200:-1], sma[DAYS200:-1],  'r-')
+
+# pTr = plt.subplot(2, 1, 2)
+# t = pTr.table(cellText=[[11, 12, 13], [21, 22, 23], [28, 29, 30]], rowLabels=['a', 'b', 'c'],
+#               colLabels=['x', 'y', 'z'], )
 
 plt.title("BABA")
 plt.xlabel("Date")
 plt.ylabel("Price")
+
+plt.setp(plt.gca().get_xticklabels(), rotation=30)
 plt.show()

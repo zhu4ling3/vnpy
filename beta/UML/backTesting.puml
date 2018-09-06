@@ -17,7 +17,11 @@ activate main
     main->be ++: 设置引擎的回测模式为K线\nsetBacktestingMode(BAR_MODE)
         return
     |||
-    main->be ++: 设置回测用的数据起始日期\nsetStartDate('20120101')
+    main->be ++: 设置回测用的数据起始日期\nsetStartDate('20120101',10)
+        note right
+            从20120101开始的10个单位数据用来初始化策略。
+            这里的两个参数必须和策略代码里的常量保持一致。
+        end note
         return
     |||
     main->be ++: 设置产品相关参数:股指1跳\nsetSlippage('0.2)
@@ -39,7 +43,7 @@ activate main
             note left: 此处将CTA引擎和CTA策略对象绑定
             create bg
             kk -> bg ++: BarGenerator(self.onBar, 5, self.onFiveBar)
-                note right: 创建Bar合成器对象
+                note right: 创建Bar合成器对象，\n并指定回调函数onFiveBar()
                 return
             create am
             kk -> am ++: ArrayManager()
@@ -58,42 +62,31 @@ activate main
             end note
             be -> db ++: 读取DB
                 return
+            be->be: 根据上面参数读取n个数据作为self.initData，\n用来初始化策略
+            be->be: 从n个数据之后读取剩余数据，\n用来产生回测数据
             return
         |||
         be->kk ++ : 初始化策略\nself.strategy.onInit()
             kk->kk ++: initData=loadBar(initDays)
                 kk -> be ++ : loadBar(barDbName, vtSymbol, days)
                     return
-                return
-            loop
-                kk -> kk ++: onBar(initData[i])
-                    kk -> bg ++: updateBar(initData[i])
+                note right: 回测引擎中，直接将上面的self.initData返回来使用
+                return 返回initData
+            |||
+            loop 遍历initData[]，生成策略依赖的初始化序列数据
+                kk->kk ++: onBar(initData[i])
+                    kk->bg ++: updateBar(initData[i])
                         bg->bg: 利用最新1分钟的bar来更新\nX分钟的OHLC数值以及交易量
                         bg->kk ++: 如果X分钟已经走完，则调用onXminBar()\nonFiveBar()
-                            note left
-                                onFiveBar()实现策略的主要逻辑。
-                                主要思路如下：
-                                1 有5分钟Bar事件来触发策略执行
-                                2 进入策略时，清除未成交的订单
-                                3 如果没有仓位，。。。
-                                4 如果持有长仓，。。。
-                                5 如果持有短仓，。。。
-                            end note
-                            kk->kk ++: cancelOrder()
-                                return
                             kk->am ++: updateBar(bar)
                                 am->am : 将bar追加到序列数组中
                                 return
-                            kk->am ++: keltner(self.kkLength, self.kkDev)
-                                return kkUp, kkDown
-                            kk->kk: 实现策略的主体，最终产生交易订单
-                            kk->kk ++: 保存同步数据到数据库\nsaveSyncData()
-                                return
                             return
-                        |||
                         return
                     return
             end loop
+            |||
+
 
             return
         |||
@@ -101,24 +94,66 @@ activate main
             note right: 回测时onStart()为空转
             return
         |||
-        loop
+        loop 遍历上述数据2，进行回测
             be->be : 将上述数据2逐一取出，\n并创建VtBarData或者VtTickData后赋值给data
-            be->kk ++ : self.strategy.onBar/onTick(data)
-                    kk -> bg ++: updateBar(data)
-                        bg->kk ++: 满足条件时调用onXminBar()\nonFiveBar()
-                            note left
-                                onFiveBar()实现策略的主要逻辑。
-                                主要思路如下：
-                                1 有5分钟Bar事件来触发策略执行
-                                2 进入策略时，清除未成交的订单
-                                3 如果没有仓位，。。。
-                                4 如果持有长仓，。。。
-                                5 如果持有短仓，。。。
-                            end note
-                            return
-                        |||
-                        return
+            be->be ++: crossLimitOrder()\n撮合限价单
+                be->kk ++: onTrade()
+                    return
+                be->kk ++: onOrder()
+                    return
+                be->be: 在tradeDict中登记成交订单
+                be->be: 从workingLimitOrderDict中删除对应订单
                 return
+            |||
+            be->be ++: crossStopOrder()\n撮合止损单
+                be->kk ++: onStopOrder()
+                    return
+                be->kk ++: onOrder()
+                    return
+                be->kk ++: onTrade()
+                    return
+                be->be: 在tradeDict中登记成交订单
+                return
+            |||
+            be->kk ++ : self.strategy.onBar/onTick(data)
+                kk -> bg ++: updateBar(initData[i])
+                    bg->bg: 利用最新1分钟的bar来更新\nX分钟的OHLC数值以及交易量
+                    bg->kk ++: 如果X分钟已经走完，则调用onXminBar()\nonFiveBar()
+                        note left
+                            onFiveBar()实现策略的主要逻辑。
+                            主要思路如下：
+                            1 有5分钟Bar事件来触发策略执行
+                            2 进入策略时，清除未成交的订单
+                            3 如果没有仓位，。。。
+                            4 如果持有长仓，。。。
+                            5 如果持有短仓，。。。
+                        end note
+                        kk->kk ++: cancelOrder()
+                            kk->be ++: cancelOrder()
+                                be->kk++: onOrder()
+                                    return
+                                be->be: 将workingStopOrderDict中的订单删除
+                                return
+                            return
+                        kk->am ++: updateBar(bar)
+                            am->am : 将bar追加到序列数组中
+                            return
+                        kk->am ++: keltner(self.kkLength, self.kkDev)
+                            return kkUp, kkDown
+                        kk->kk ++: 实现策略的主体，最终产生交易订单
+                            kk->be ++: SendOrder()
+                                be->kk ++: onOrder()
+                                    return
+                                be->be: 将订单对象加入\nworkingLimitOrderDict和limitOrderDict中
+                                return
+                             return
+                        kk->kk ++: 保存同步数据到数据库\nsaveSyncData()
+                            return
+                        return
+                    |||
+                    return
+                return
+
         end loop
         return
     |||
