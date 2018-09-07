@@ -16,6 +16,22 @@ HISTORICAL_DATA = {
         'working': True,
         'list': [
             {
+                'workflag': True,
+                'symbol': 'GOOG',
+                'gateway': 'IB',
+                'exchange': 'SMART',
+                'currency': 'USD',
+                'sectype': '股票',
+                'start': '20010101 00:00:00',
+                'end': '20180908 00:00:00',
+                'objects': [
+                    #{'type':'tick'},
+                    # {'type': 'bar', 'size': '1 min'},
+#                    {'type': 'bar', 'size': '1 hour'},
+                   {'type': 'bar', 'size': '1 day'},
+                ],
+            },
+            {
                 'workflag': False,
                 'symbol': 'XAUUSD',
                 'gateway': 'IB',
@@ -49,7 +65,7 @@ HISTORICAL_DATA = {
                 ],
             },
             {
-                'workflag': True,
+                'workflag': False,
                 'symbol': 'BABA',
                 'gateway': 'IB',
                 'exchange': 'SMART',

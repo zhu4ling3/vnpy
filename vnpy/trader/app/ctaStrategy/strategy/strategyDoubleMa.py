@@ -22,6 +22,10 @@ class DoubleMaStrategy(CtaTemplate):
     fastWindow = 10     # 快速均线参数
     slowWindow = 60     # 慢速均线参数
     initDays = 10       # 初始化数据所用的天数
+
+    # fastWindow = 60     # 快速均线参数
+    # slowWindow = 200     # 慢速均线参数
+    # initDays = 200       # 初始化数据所用的天数
     
     # 策略变量
     fastMa0 = EMPTY_FLOAT   # 当前最新的快速EMA
@@ -56,8 +60,8 @@ class DoubleMaStrategy(CtaTemplate):
         super(DoubleMaStrategy, self).__init__(ctaEngine, setting)
         
         self.bg = BarGenerator(self.onBar)
-        self.am = ArrayManager()
-        
+        # self.am = ArrayManager()
+        self.am = ArrayManager(self.slowWindow + 1) # ZL
         # 注意策略类中的可变对象属性（通常是list和dict等），在策略初始化时需要重新创建，
         # 否则会出现多个策略实例之间数据共享的情况，有可能导致潜在的策略逻辑错误风险，
         # 策略类中的这些可变对象属性可以选择不写，全都放在__init__下面，写主要是为了阅读
