@@ -276,7 +276,7 @@ class HistoricalBarRequest(object):
 
         self.gateway = ibgw
 
-        self.isRunning= False
+        self.isRunning= True
 
     # ------------------------------------------------------------------------------
     def subscribe(self, req: VtHistoricalBarReq):

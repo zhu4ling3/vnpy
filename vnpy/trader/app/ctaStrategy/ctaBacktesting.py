@@ -17,6 +17,10 @@ import pymongo
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
+import mpl_finance as mpf
+import matplotlib.dates as mpd
+import talib
+import matplotlib.gridspec as gridspec
 
 # 如果安装了seaborn则设置为白色风格
 try:
@@ -88,6 +92,8 @@ class BacktestingEngine(object):
         self.tradeDict = OrderedDict()  # 成交字典
         
         self.logList = []               # 日志记录
+
+        self.quotes = []  # ZL 用于回执策略执行结果的K线
         
         # 当前最新数据，用于模拟成交用
         self.tick = None
@@ -207,7 +213,8 @@ class BacktestingEngine(object):
         for d in initCursor:
             data = dataClass()
             data.__dict__ = d
-            self.initData.append(data)      
+            self.initData.append(data)
+            self.quotes += [ [mpd.date2num(d['datetime']), d['open'], d['high'], d['low'], d['close'], d['volume']] ] # ZL 用于回测结果显示K线
         
         # 载入回测数据
         if not self.dataEndDate:
@@ -246,6 +253,8 @@ class BacktestingEngine(object):
         self.output(u'开始回放数据')
 
         for d in self.dbCursor:
+            self.quotes += [ [mpd.date2num(d['datetime']), d['open'], d['high'], d['low'], d['close'],
+                            d['volume']] ] # ZL 用于回测结果显示K线
             data = dataClass()
             data.__dict__ = d
             func(data)     
@@ -823,38 +832,216 @@ class BacktestingEngine(object):
         self.output(u'盈利交易平均值\t%s' %formatNumber(d['averageWinning']))
         self.output(u'亏损交易平均值\t%s' %formatNumber(d['averageLosing']))
         self.output(u'盈亏比：\t%s' %formatNumber(d['profitLossRatio']))
-    
+
+        self.drawFigure3(d)
+
+    # --------------------------------
+    def drawFigure1(self,d):
         # 绘图
         fig = plt.figure(figsize=(10, 16))
-        
-        pCapital = plt.subplot(4, 1, 1)
+
+        pCapital = plt.subplot(5, 1, 1)
         pCapital.set_ylabel("capital")
         pCapital.plot(d['capitalList'], color='r', lw=0.8)
-        
-        pDD = plt.subplot(4, 1, 2)
+
+        pDD = plt.subplot(5, 1, 2)
         pDD.set_ylabel("DD")
         pDD.bar(range(len(d['drawdownList'])), d['drawdownList'], color='g')
-        
-        pPnl = plt.subplot(4, 1, 3)
+
+        pPnl = plt.subplot(5, 1, 3)
         pPnl.set_ylabel("pnl")
         pPnl.hist(d['pnlList'], bins=50, color='c')
 
-        pPos = plt.subplot(4, 1, 4)
-        pPos.set_ylabel("Position")
-        if d['posList'][-1] == 0:
-            del d['posList'][-1]
-        tradeTimeIndex = [item.strftime("%m/%d %H:%M:%S") for item in d['tradeTimeList']]
-        xindex = np.arange(0, len(tradeTimeIndex), np.int(len(tradeTimeIndex)/10))
-        # tradeTimeIndex = map(lambda i: tradeTimeIndex[i], xindex) # python3
-        tradeTimeIndex = list(map(lambda i: tradeTimeIndex[i], xindex))
-        pPos.plot(d['posList'], color='k', drawstyle='steps-pre')
-        pPos.set_ylim(-1.2, 1.2)
-        plt.sca(pPos)
-        plt.tight_layout()
-        plt.xticks(xindex, tradeTimeIndex, rotation=30)  # 旋转15
-        
+        # pPos = plt.subplot(5, 1, 4)
+        # pPos.set_ylabel("Position")
+        # if d['posList'][-1] == 0:
+        #     del d['posList'][-1]
+        # tradeTimeIndex = [item.strftime("%m/%d %H:%M:%S") for item in d['tradeTimeList']]
+        # xindex = np.arange(0, len(tradeTimeIndex), np.int(len(tradeTimeIndex)/10))
+        # # tradeTimeIndex = map(lambda i: tradeTimeIndex[i], xindex) # python3
+        # tradeTimeIndex = list(map(lambda i: tradeTimeIndex[i], xindex))
+        # pPos.plot(d['posList'], color='k', drawstyle='steps-pre')
+        # pPos.set_ylim(-1.2, 1.2)
+        # plt.sca(pPos)
+        # plt.tight_layout()
+        # plt.xticks(xindex, tradeTimeIndex, rotation=30)  # 旋转15
+
+        # 画K线
+        pBar = plt.subplot(5, 1, 5)
+        pBar.set_ylabel("K线")
+        plt.sca(pBar)
+        axes = plt.gca()
+        mpf.candlestick_ohlc(axes, self.quotes, width=0.4, colorup='g', colordown='r')
+        axes.xaxis_date()
+        axes.autoscale_view()
+
+        # 画200d和60d均线
+        DAYS200 = 200
+        DAYS60 = 60
+        sma200 = talib.SMA(np.array([o[4] for o in self.quotes]), DAYS200)
+        sma60 = talib.SMA(np.array([o[4] for o in self.quotes]), DAYS60)
+        dat = np.array([o[0] for o in self.quotes])
+        axes.plot(dat[DAYS200:-1], sma200[DAYS200:-1], 'r-')
+        axes.plot(dat[DAYS60:-1], sma60[DAYS60:-1], 'b-')
+
+        # 画成交点
+        for trade in self.tradeDict.values():
+            dt = trade.dt
+            price = trade.price
+            if trade.direction == DIRECTION_LONG:
+                axes.plot([mpd.date2num(dt)], [price], 'bo')
+            elif trade.direction == DIRECTION_SHORT:
+                axes.plot([mpd.date2num(dt)], [price], 'b^')
+            else:
+                raise Exception('')
+
         plt.show()
-    
+        print('')
+
+
+    #--------------------------------
+    def drawFigure2(self, d):
+        # 绘图
+        fig = plt.figure(figsize=(10, 16), tight_layout=True)
+        gs = gridspec.GridSpec(3, 2)
+
+        # 画K线
+        pBar = fig.add_subplot(gs[0, :])
+        # pBar = plt.subplot(5, 1, 5)
+        pBar.set_ylabel("K线")
+        plt.sca(pBar)
+        axes = plt.gca()
+        mpf.candlestick_ohlc(axes, self.quotes, width=0.4, colorup='g', colordown='r')
+        axes.xaxis_date()
+        axes.autoscale_view()
+
+        # 画200d和60d均线
+        DAYS200 = 200
+        DAYS60 = 60
+        sma200 = talib.SMA(np.array([o[4] for o in self.quotes]), DAYS200)
+        sma60 = talib.SMA(np.array([o[4] for o in self.quotes]), DAYS60)
+        dat = np.array([o[0] for o in self.quotes])
+        axes.plot(dat[DAYS200:-1], sma200[DAYS200:-1], 'r-')
+        axes.plot(dat[DAYS60:-1], sma60[DAYS60:-1], 'b-')
+
+        # 画成交点
+        for trade in self.tradeDict.values():
+            dt = trade.dt
+            price = trade.price
+            if trade.direction == DIRECTION_LONG:
+                axes.plot([mpd.date2num(dt)], [price], 'bo')
+            elif trade.direction == DIRECTION_SHORT:
+                axes.plot([mpd.date2num(dt)], [price], 'b^')
+            else:
+                raise Exception('')
+
+
+        # pCapital = plt.subplot(5, 1, 1)
+        pCapital = fig.add_subplot(gs[1, 0])
+        pCapital.set_ylabel("capital")
+        pCapital.plot(d['capitalList'], color='r', lw=0.8)
+
+        # pDD = plt.subplot(5, 1, 2)
+        pDD = fig.add_subplot(gs[1, 1])
+        pDD.set_ylabel("DD")
+        pDD.bar(range(len(d['drawdownList'])), d['drawdownList'], color='g')
+
+        # pPnl = plt.subplot(5, 1, 3)
+        pPnl = fig.add_subplot(gs[2, 0])
+        pPnl.set_ylabel("pnl")
+        pPnl.hist(d['pnlList'], bins=50, color='c')
+
+
+        # # pPos = plt.subplot(5, 1, 4)
+        # pPos = fig.add_subplot(gs[2, 1])
+        # pPos.set_ylabel("Position")
+        # if d['posList'][-1] == 0:
+        #     del d['posList'][-1]
+        # tradeTimeIndex = [item.strftime("%m/%d %H:%M:%S") for item in d['tradeTimeList']]
+        # xindex = np.arange(0, len(tradeTimeIndex), np.int(len(tradeTimeIndex)/10))
+        # # tradeTimeIndex = map(lambda i: tradeTimeIndex[i], xindex) # python3
+        # tradeTimeIndex = list(map(lambda i: tradeTimeIndex[i], xindex))
+        # pPos.plot(d['posList'], color='k', drawstyle='steps-pre')
+        # pPos.set_ylim(-1.2, 1.2)
+        # plt.sca(pPos)
+        # plt.tight_layout()
+        # plt.xticks(xindex, tradeTimeIndex, rotation=30)  # 旋转15
+
+        plt.show()
+        print('')
+
+    #--------------------------------
+    def drawFigure3(self, d):
+        # 绘图
+        fig = plt.figure(figsize=(10, 16), tight_layout=True)
+        gs = gridspec.GridSpec(3, 2, height_ratios=[0.5, 0.25, 0.25])
+
+        # 画K线
+        pBar = fig.add_subplot(gs[0, :])
+        # pBar = plt.subplot(5, 1, 5)
+        pBar.set_ylabel("K线")
+        plt.sca(pBar)
+        axes = plt.gca()
+        mpf.candlestick_ohlc(axes, self.quotes, width=0.4, colorup='g', colordown='r')
+        axes.xaxis_date()
+        axes.autoscale_view()
+
+        # 画200d和60d均线
+        DAYS200 = 200
+        DAYS60 = 60
+        sma200 = talib.SMA(np.array([o[4] for o in self.quotes]), DAYS200)
+        sma60 = talib.SMA(np.array([o[4] for o in self.quotes]), DAYS60)
+        dat = np.array([o[0] for o in self.quotes])
+        axes.plot(dat[DAYS200:-1], sma200[DAYS200:-1], 'r-')
+        axes.plot(dat[DAYS60:-1], sma60[DAYS60:-1], 'b-')
+
+        # 画成交点
+        for trade in self.tradeDict.values():
+            dt = trade.dt
+            price = trade.price
+            if trade.direction == DIRECTION_LONG:
+                axes.plot([mpd.date2num(dt)], [price], 'bo')
+            elif trade.direction == DIRECTION_SHORT:
+                axes.plot([mpd.date2num(dt)], [price], 'b^')
+            else:
+                raise Exception('')
+
+
+        # pCapital = plt.subplot(5, 1, 1)
+        pCapital = fig.add_subplot(gs[1, 0])
+        pCapital.set_ylabel("capital")
+        pCapital.plot(d['capitalList'], color='r', lw=0.8)
+
+        # pDD = plt.subplot(5, 1, 2)
+        pDD = fig.add_subplot(gs[1, 1])
+        pDD.set_ylabel("DD")
+        pDD.bar(range(len(d['drawdownList'])), d['drawdownList'], color='g')
+
+        # pPnl = plt.subplot(5, 1, 3)
+        pPnl = fig.add_subplot(gs[2, 0])
+        pPnl.set_ylabel("pnl")
+        pPnl.hist(d['pnlList'], bins=50, color='c')
+
+
+        # # pPos = plt.subplot(5, 1, 4)
+        # pPos = fig.add_subplot(gs[2, 1])
+        # pPos.set_ylabel("Position")
+        # if d['posList'][-1] == 0:
+        #     del d['posList'][-1]
+        # tradeTimeIndex = [item.strftime("%m/%d %H:%M:%S") for item in d['tradeTimeList']]
+        # xindex = np.arange(0, len(tradeTimeIndex), np.int(len(tradeTimeIndex)/10))
+        # # tradeTimeIndex = map(lambda i: tradeTimeIndex[i], xindex) # python3
+        # tradeTimeIndex = list(map(lambda i: tradeTimeIndex[i], xindex))
+        # pPos.plot(d['posList'], color='k', drawstyle='steps-pre')
+        # pPos.set_ylim(-1.2, 1.2)
+        # plt.sca(pPos)
+        # plt.tight_layout()
+        # plt.xticks(xindex, tradeTimeIndex, rotation=30)  # 旋转15
+
+        plt.show()
+        print('')
+
+
     #----------------------------------------------------------------------
     def clearBacktestingResult(self):
         """清空之前回测的结果"""
@@ -1118,7 +1305,7 @@ class BacktestingEngine(object):
         pKDE = plt.subplot(4, 1, 4)
         pKDE.set_title('Daily Pnl Distribution')
         df['netPnl'].hist(bins=50)
-        
+
         plt.show()
        
         
