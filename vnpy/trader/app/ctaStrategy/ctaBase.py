@@ -26,9 +26,9 @@ STOPORDERPREFIX = 'CtaStopOrder.'
 SETTING_DB_NAME = 'VnTrader_Setting_Db'
 POSITION_DB_NAME = 'VnTrader_Position_Db'
 
-TICK_DB_NAME = 'VnTrader_Tick_Db'
-DAY_DB_NAME = 'VnTrader_1Day_Db'
-MINUTE_DB_NAME = 'VnTrader_1Min_Db'
+TICK_DB_NAME = 'vntrader_tick_db'
+DAY_DB_NAME = 'vntrader_1day_db'
+MINUTE_DB_NAME = 'vntrader_1min_db'
 
 # 引擎类型，用于区分当前策略的运行环境
 ENGINETYPE_BACKTESTING = 'backtesting'  # 回测

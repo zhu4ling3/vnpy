@@ -2,7 +2,7 @@
 	"fontFamily": "微软雅黑",
 	"fontSize": 12,
 
-	"mongoHost": "localhost",
+	"mongoHost": "busrv1.bud.zlzen.com",
 	"mongoPort": 27017,
 	"mongoLogging": true,
 
