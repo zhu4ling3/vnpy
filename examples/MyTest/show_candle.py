@@ -109,3 +109,4 @@ ax1.plot(dates[-MAX_BAR_NUM:], emaday200[-MAX_BAR_NUM:], 'r-', label='60days')
 ax1.legend(loc='upper left', shadow=True, fontsize='x-large')
 ax1.autoscale_view()
 
+fig.show()
